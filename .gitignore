@@ -177,3 +177,7 @@ outputs/
 *.urdf
 *.xml
 *.part
+
+
+# venv
+lerobot-env/

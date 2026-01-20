@@ -322,6 +322,22 @@ def record_loop(
 
         elif policy is None and isinstance(teleop, Teleoperator):
             act = teleop.get_action()
+            
+            # --- [START NEW CODE] ---
+            # Check for RC Commands to control flow
+            # We use a try/except block in case the method doesn't exist on other teleoperators
+            try:
+                if teleop.is_next_episode_command():
+                    print("\n✅ RC Command: Roller UP -> Saving & Next Episode...")
+                    events["exit_early"] = True
+                    
+                elif teleop.is_rerecord_command():
+                    print("\n♻️ RC Command: Roller DOWN -> Discarding & Rerecording...")
+                    events["rerecord_episode"] = True
+                    events["exit_early"] = True
+            except AttributeError:
+                pass
+            # --- [END NEW CODE] ---
 
             # Applies a pipeline to the raw teleop action, default is IdentityProcessor
             act_processed_teleop = teleop_action_processor((act, obs))
@@ -378,6 +394,7 @@ def record(cfg: RecordConfig) -> LeRobotDataset:
         init_rerun(session_name="recording")
 
     robot = make_robot_from_config(cfg.robot)
+    
     teleop = make_teleoperator_from_config(cfg.teleop) if cfg.teleop is not None else None
 
     teleop_action_processor, robot_action_processor, robot_observation_processor = make_default_processors()
@@ -424,6 +441,10 @@ def record(cfg: RecordConfig) -> LeRobotDataset:
             image_writer_threads=cfg.dataset.num_image_writer_threads_per_camera * len(robot.cameras),
             batch_encoding_size=cfg.dataset.video_encoding_batch_size,
         )
+        
+        print("==========================================================")
+        print(dataset)
+        print("==========================================================")
 
     # Load pretrained policy
     policy = None if cfg.policy is None else make_policy(cfg.policy, ds_meta=dataset.meta)
