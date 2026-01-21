@@ -181,3 +181,6 @@ outputs/
 
 # venv
 lerobot-env/
+
+# data 
+data*/

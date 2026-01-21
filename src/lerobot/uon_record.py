@@ -5,8 +5,6 @@ import lerobot.teleoperators.uon_rc_teleoperator.uon_rc_teleoperator
 from scripts.lerobot_record import main
 
 if __name__ == "__main__":
-    os.environ["RERUN_IP"] = "127.0.0.1:9876"
-     
     if len(sys.argv) == 1:
         print("[System] UON AMR 기본 인자로 실행합니다...")
         
@@ -19,9 +17,10 @@ if __name__ == "__main__":
             "--teleop.type=uon_rc_teleoperator",
             "--teleop.port=/dev/ttyUSB14",
             
-            "--dataset.repo_id=uonro/mobile_bot_formal",
-            "--dataset.single_task=Drive forward",
-            "--dataset.root=data",
+            "--dataset.repo_id=uonro/goto1",
+            "--dataset.single_task=Search right to find marker 1, approach it, and stop.",
+            "--dataset.root=data_goto1",
+            # "--resume=true",  # only when resuming 
             "--dataset.push_to_hub=false",
             
             "--dataset.fps=15",

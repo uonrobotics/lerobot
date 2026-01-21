@@ -27,6 +27,9 @@ import numpy as np
 import serial
 import cv2 
 
+# Camera webstream
+from flask import Flask, Response
+
 # LeRobot Imports
 from lerobot.cameras import CameraConfig
 from lerobot.robots import Robot, RobotConfig
@@ -83,6 +86,10 @@ class ThreadedOrbbec:
         self.thread = None
         self.lock = threading.Lock()
         
+        # Flask setup
+        self.app = Flask(__name__)
+        self._setup_routes()
+        
         # Placeholders for data
         self.latest_rgb = np.zeros((height, width, 3), dtype=np.uint8)
         self.latest_depth_vis = np.zeros((height, width, 3), dtype=np.uint8)
@@ -132,6 +139,14 @@ class ThreadedOrbbec:
             self.thread.start()
             logger.info("✅ [Orbbec] SDK Pipeline Started")
             
+            # Start Flask thread on port 5000
+            self.flask_thread = threading.Thread(
+                target=lambda: self.app.run(host='0.0.0.0', port=5000, threaded=True, use_reloader=False),
+                daemon=True
+            )
+            self.flask_thread.start()
+            logger.info("✅ [Orbbec] POV Stream started at http://<robot_ip>:5000")
+                
         except Exception as e:
             logger.error(f"❌ [Orbbec] Init failed: {e}")
 
@@ -231,45 +246,121 @@ class ThreadedOrbbec:
         depth_vis_rgb = cv2.cvtColor(depth_vis_bgr, cv2.COLOR_BGR2RGB)
 
         return depth_mm, depth_vis_rgb
+    
+    # --- Flask Routes ---
+    def _setup_routes(self):
+        @self.app.route('/')
+        def index():
+            return "<h1>UON AMR - Remote POV</h1><img src='/video_feed' width='640'>"
+
+        @self.app.route('/video_feed')
+        def video_feed():
+            return Response(self._generate_stream(),
+                          mimetype='multipart/x-mixed-replace; boundary=frame')
+            
+    def _generate_stream(self):
+        """Optimized Generator for the MJPEG stream to reduce lag."""
+        # Limit the web stream to 10 FPS to save network bandwidth
+        # Recording will still happen at 30 FPS
+        stream_delay = 1.0 / 10.0 
+        last_frame_time = time.time()
+
+        while self.running:
+            current_time = time.time()
+            if current_time - last_frame_time < stream_delay:
+                time.sleep(0.01) # Short sleep to prevent CPU spiking
+                continue
+            
+            last_frame_time = current_time
+
+            with self.lock:
+                # 1. Resize the frame for the web (Much faster to transmit)
+                # 320x240 is usually perfect for monitoring on a laptop
+                small_frame = cv2.resize(self.latest_rgb, (320, 240))
+                # 2. Convert RGB to BGR for OpenCV
+                frame_bgr = cv2.cvtColor(small_frame, cv2.COLOR_RGB2BGR)
+            
+            # 3. Lower JPEG quality to 40 (Standard for low-latency streaming)
+            ret, buffer = cv2.imencode('.jpg', frame_bgr, [cv2.IMWRITE_JPEG_QUALITY, 40])
+            
+            if not ret:
+                continue
+                
+            yield (b'--frame\r\n'
+                   b'Content-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n')
 
 # ==============================================================================
 # 2. Other Drivers
 # ==============================================================================
 class ThreadedLidar:
     def __init__(self, port, baudrate):
-        self.port = port; self.baudrate = baudrate
-        self.lidar = None; self.latest_scan = np.zeros(360, dtype=np.float32)
-        self.running = False; self.thread = None; self.lock = threading.Lock()
+        self.port = port
+        self.baudrate = baudrate
+        self.lidar = None
+        self.latest_scan = np.zeros(360, dtype=np.float32)
+        self.running = False
+        self.thread = None
+        self.lock = threading.Lock()
 
     def start(self):
         try:
             self.lidar = RPLidar(self.port, baudrate=self.baudrate, timeout=3)
+            # Essential for S2: Force a clean start state
+            self.lidar.stop()
+            self.lidar.start_motor()
+            time.sleep(1.0) 
             self.lidar.clean_input()
+            
             self.running = True
             self.thread = threading.Thread(target=self._run, daemon=True)
             self.thread.start()
             logger.info("✅ [Lidar] Thread started")
-        except Exception as e: logger.error(f"❌ [Lidar] Start failed: {e}")
+        except Exception as e: 
+            logger.error(f"❌ [Lidar] Start failed: {e}")
 
     def stop(self):
         self.running = False
-        if self.thread: self.thread.join()
+        if self.thread:
+            self.thread.join(timeout=2.0)
         if self.lidar:
-            try: self.lidar.stop(); self.lidar.disconnect()
+            try:
+                self.lidar.stop()
+                self.lidar.stop_motor()
+                self.lidar.disconnect()
             except: pass
 
     def _run(self):
-        try:
-            for scan in self.lidar.iter_scans(max_buf_meas=500):
-                if not self.running: break
-                temp = np.zeros(360, dtype=np.float32)
-                for (_, angle, distance) in scan: temp[min(359, int(angle))] = distance
-                with self.lock: self.latest_scan = temp
-                time.sleep(0.001)
-        except Exception: pass
+        """Your original logic, wrapped for resilience."""
+        while self.running:
+            try:
+                # Increased max_buf_meas to 1000 to better handle S2 speed
+                for scan in self.lidar.iter_scans(max_buf_meas=1000):
+                    if not self.running:
+                        break
+                    
+                    # Your original logic: create a fresh array for each full rotation
+                    temp = np.zeros(360, dtype=np.float32)
+                    for (_, angle, distance) in scan: 
+                        temp[min(359, int(angle))] = distance
+                        
+                    with self.lock: 
+                        self.latest_scan = temp
+                    time.sleep(0.001)
+
+            except Exception as e:
+                # If a mismatch happens, we don't 'pass' (exit the thread).
+                # We clean the buffer and let the 'while' loop restart the scan.
+                if self.running:
+                    logger.warning(f"⚠️ [Lidar] Sync lost: {e}. Recovering...")
+                    try:
+                        self.lidar.clean_input()
+                        time.sleep(0.1)
+                    except: pass
+                continue
 
     def get_scan(self):
-        with self.lock: return self.latest_scan.copy()
+        with self.lock:
+            return self.latest_scan.copy()
 
 class UONBatteryDriver:
     def __init__(self, port, baudrate=19200):
@@ -402,8 +493,11 @@ class UONAMR(Robot):
         return {ACTION_LINEAR_VEL: float, ACTION_ANGULAR_VEL: float}
 
     def get_observation(self) -> Dict[str, Any]:
-        if not self._is_connected: raise DeviceNotConnectedError(f"{self.name} not connected")
-        if self.lidar_driver: self._latest_scan = self.lidar_driver.get_scan()
+        if not self._is_connected: 
+            raise DeviceNotConnectedError(f"{self.name} not connected")
+        
+        if self.lidar_driver: 
+            self._latest_scan = self.lidar_driver.get_scan()
 
         rgb = np.zeros((self.config.camera_h, self.config.camera_w, 3), dtype=np.uint8)
         depth_vis = np.zeros((self.config.camera_h, self.config.camera_w, 3), dtype=np.uint8)

@@ -487,6 +487,14 @@ def record(cfg: RecordConfig) -> LeRobotDataset:
                 single_task=cfg.dataset.single_task,
                 display_data=cfg.display_data,
             )
+            
+            # After the recording loop ends
+            if not events["stop_recording"]:
+                print("Waiting for roller release...")
+                # Stay in this loop as long as the command is still 'True'
+                while teleop.is_next_episode_command() or teleop.is_rerecord_command():
+                    time.sleep(0.01) # Very short sleep to prevent CPU spiking
+                print("Roller released. Proceeding to reset.")
 
             # Execute a few seconds without recording to give time to manually reset the environment
             # Skip reset for the last episode to be recorded
