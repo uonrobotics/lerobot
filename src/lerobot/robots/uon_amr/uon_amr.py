@@ -40,7 +40,7 @@ from .uon_amr_driver import UONAMRDriver
 try:
     from pyorbbecsdk import (
         Pipeline, Config, OBSensorType, OBFormat, OBStreamType, 
-        OBFrameAggregateOutputMode, AlignFilter
+        OBFrameAggregateOutputMode, AlignFilter, OBPropertyID
     )
     ORBBEC_AVAILABLE = True
 except ImportError:
@@ -103,7 +103,7 @@ class ThreadedOrbbec:
         try:
             self.pipeline = Pipeline()
             config = Config()
-
+            
             # 1. Configure RGB
             try:
                 profiles = self.pipeline.get_stream_profile_list(OBSensorType.COLOR_SENSOR)
@@ -134,6 +134,27 @@ class ThreadedOrbbec:
             self.pipeline.enable_frame_sync()
             self.pipeline.start(config)
             
+            device = self.pipeline.get_device()
+            
+            #### Apply Camera Settings ####
+            try:
+                # 1. Anti-Flicker (Fixed)
+                device.set_int_property(OBPropertyID.OB_PROP_COLOR_POWER_LINE_FREQUENCY_INT, 2)
+                
+                # 2. Exposure (Fixed at flicker-free value)
+                device.set_bool_property(OBPropertyID.OB_PROP_COLOR_AUTO_EXPOSURE_BOOL, False)
+                device.set_int_property(OBPropertyID.OB_PROP_COLOR_EXPOSURE_INT, 80)
+                
+                # 3. FIX THE WHITENESS: Lower the Gain
+                # Try a value between 10 and 30. Higher = brighter/noisier.
+                device.set_int_property(OBPropertyID.OB_PROP_COLOR_GAIN_INT, 1) 
+                
+                logger.info("✅ [Orbbec] Flicker gone and brightness adjusted via Gain.")
+                
+            except Exception as e:
+                logger.error(f"❌ Failed to apply Orbbec settings: {e}")
+            #### Apply Camera Settings ####
+                
             self.running = True
             self.thread = threading.Thread(target=self._run, daemon=True)
             self.thread.start()
