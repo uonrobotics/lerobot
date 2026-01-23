@@ -33,6 +33,22 @@ source lerobot-env/bin/activate
 python3 src/lerobot/uon_record.py
 ```
 
+# Checking videos
+``` shell
+cd ~/workspace/lerobot/data_goto1/videos
+python3 -m http.server 8000
+# 192.168.27.172:8000 
+```
+
+# Deleting a episode
+``` shell
+python -m lerobot.scripts.lerobot_edit_dataset \
+    --repo_id . \
+    --root ./data_goto1 \
+    --operation.type delete_episodes \
+    --operation.episode_indices "[115]"
+```
+
 # visualize data
 ``` shell
 # AMR PC !! 

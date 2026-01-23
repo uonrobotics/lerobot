@@ -183,8 +183,9 @@ class ThreadedOrbbec:
     def _run(self):
         while self.running:
             try:
-                frames = self.pipeline.wait_for_frames(100)
-                if frames is None: continue
+                frames = self.pipeline.wait_for_frames(50)
+                if frames is None: 
+                    continue
 
                 if self.align_filter:
                     frames = self.align_filter.process(frames)
@@ -195,16 +196,26 @@ class ThreadedOrbbec:
                 depth_frame = frames.get_depth_frame()
 
                 if color_frame and depth_frame:
-                    rgb = self._process_color_frame(color_frame)
-                    depth_raw, depth_vis = self._process_depth_frame(depth_frame, self.min_mm, self.max_mm)
+                    # 1. Raw 데이터 추출 (최소한의 연산)
+                    w, h = color_frame.get_width(), color_frame.get_height()
+                    rgb = np.frombuffer(color_frame.get_data(), dtype=np.uint8).reshape((h, w, 3))
                     
-                    # Ensure resize
-                    if rgb.shape[0] != self.height or rgb.shape[1] != self.width:
-                        rgb = cv2.resize(rgb, (self.width, self.height))
-                    if depth_raw.shape[0] != self.height or depth_raw.shape[1] != self.width:
-                        depth_raw = cv2.resize(depth_raw, (self.width, self.height), interpolation=cv2.INTER_NEAREST)
-                    if depth_vis.shape[0] != self.height or depth_vis.shape[1] != self.width:
-                        depth_vis = cv2.resize(depth_vis, (self.width, self.height))
+                    scale = float(depth_frame.get_depth_scale())
+                    depth_u16 = np.frombuffer(depth_frame.get_data(), dtype=np.uint16).reshape((depth_frame.get_height(), depth_frame.get_width()))
+
+                    # 2. 크기 조정 (필요한 경우에만 수행, NEAREST 보간법으로 CPU 절약)
+                    if h != self.height or w != self.width:
+                        rgb = cv2.resize(rgb, (self.width, self.height), interpolation=cv2.INTER_LINEAR)
+                        depth_raw = cv2.resize(depth_u16, (self.width, self.height), interpolation=cv2.INTER_NEAREST)
+                    else:
+                        depth_raw = depth_u16
+
+                    # 3. 시각화용 데이터(Depth Vis)는 락 외부에서 필요할 때만 생성하거나 
+                    # 부하가 크면 주기를 조절 (여기서는 최적화하여 유지)
+                    clipped = np.clip(depth_raw.astype(np.int32), self.min_mm, self.max_mm).astype(np.uint16)
+                    depth_8u = cv2.normalize(clipped, None, 0, 255, cv2.NORM_MINMAX, dtype=cv2.CV_8U)
+                    depth_vis = cv2.applyColorMap(depth_8u, cv2.COLORMAP_JET)
+                    depth_vis = cv2.cvtColor(depth_vis, cv2.COLOR_BGR2RGB)
 
                     with self.lock:
                         self.latest_rgb = rgb
@@ -212,7 +223,8 @@ class ThreadedOrbbec:
                         self.latest_depth_raw = depth_raw
 
             except Exception as e:
-                pass
+                logger.error(f"❌ [Orbbec] Run loop error: {e}")
+                time.sleep(0.1)
 
     def get_data(self):
         with self.lock:
@@ -280,33 +292,30 @@ class ThreadedOrbbec:
                           mimetype='multipart/x-mixed-replace; boundary=frame')
             
     def _generate_stream(self):
-        """Optimized Generator for the MJPEG stream to reduce lag."""
-        # Limit the web stream to 10 FPS to save network bandwidth
-        # Recording will still happen at 30 FPS
+        # 🟢 최적화 1: 10 FPS로 제한 (사람이 조종하기에 충분한 속도)
         stream_delay = 1.0 / 10.0 
         last_frame_time = time.time()
 
         while self.running:
             current_time = time.time()
             if current_time - last_frame_time < stream_delay:
-                time.sleep(0.01) # Short sleep to prevent CPU spiking
+                time.sleep(0.01) # CPU 휴식
                 continue
             
             last_frame_time = current_time
 
+            # 🟢 최적화 2: 락 안에서는 '복사'만 수행하여 LiDAR 루프 방해 차단
             with self.lock:
-                # 1. Resize the frame for the web (Much faster to transmit)
-                # 320x240 is usually perfect for monitoring on a laptop
-                small_frame = cv2.resize(self.latest_rgb, (320, 240))
-                # 2. Convert RGB to BGR for OpenCV
-                frame_bgr = cv2.cvtColor(small_frame, cv2.COLOR_RGB2BGR)
+                frame_to_process = self.latest_rgb.copy()
             
-            # 3. Lower JPEG quality to 40 (Standard for low-latency streaming)
-            ret, buffer = cv2.imencode('.jpg', frame_bgr, [cv2.IMWRITE_JPEG_QUALITY, 40])
+            # 🟢 최적화 3: 해상도를 더 낮춤 (240x180) 및 가장 빠른 보간법(NEAREST) 사용
+            small_frame = cv2.resize(frame_to_process, (240, 180), interpolation=cv2.INTER_NEAREST)
+            frame_bgr = cv2.cvtColor(small_frame, cv2.COLOR_RGB2BGR)
             
-            if not ret:
-                continue
-                
+            # 🟢 최적화 4: JPEG 품질을 15로 낮춤 (노이즈는 늘지만 CPU 사용량 급감)
+            ret, buffer = cv2.imencode('.jpg', frame_bgr, [cv2.IMWRITE_JPEG_QUALITY, 15])
+            
+            if not ret: continue
             yield (b'--frame\r\n'
                    b'Content-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n')
 
@@ -354,28 +363,24 @@ class ThreadedLidar:
         """Your original logic, wrapped for resilience."""
         while self.running:
             try:
-                # Increased max_buf_meas to 1000 to better handle S2 speed
-                for scan in self.lidar.iter_scans(max_buf_meas=1000):
-                    if not self.running:
-                        break
+                # max_buf_meas를 늘려 CPU가 바쁠 때 버퍼링 허용
+                # S2는 초당 최대 32,000포트를 쏘기 때문에 버퍼가 커야 합니다.
+                for scan in self.lidar.iter_scans(max_buf_meas=4000):
+                    if not self.running: break
                     
-                    # Your original logic: create a fresh array for each full rotation
                     temp = np.zeros(360, dtype=np.float32)
                     for (_, angle, distance) in scan: 
+                        # 각도 정밀도를 정수로 매핑 (데이터 품질 유지)
                         temp[min(359, int(angle))] = distance
                         
                     with self.lock: 
                         self.latest_scan = temp
-                    time.sleep(0.001)
 
             except Exception as e:
-                # If a mismatch happens, we don't 'pass' (exit the thread).
-                # We clean the buffer and let the 'while' loop restart the scan.
                 if self.running:
-                    logger.warning(f"⚠️ [Lidar] Sync lost: {e}. Recovering...")
+                    logger.warning(f"⚠️ [Lidar] Sync lost: {e}. Rapid recovery...")
                     try:
-                        self.lidar.clean_input()
-                        time.sleep(0.1)
+                        self.lidar.clean_input() 
                     except: pass
                 continue
 
