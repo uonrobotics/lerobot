@@ -58,7 +58,7 @@ class DataAggregator():
         joint_velocities = action_info['robot']['joint_velocities']
         time = action_info['time']
         index = action_info['index']
-        print(f'[Debug] Follower action index: {index}, time: {time:.4f}s')
+        # print(f'[Debug] Follower action index: {index}, time: {time:.4f}s')
         actions = [joint_positions[i] for i,name in enumerate(joint_names) if 'joint' in name]
         return np.array(actions, dtype=dtype)
     
@@ -74,7 +74,7 @@ class DataAggregator():
         joint_velocities = action_info['robot']['joint_velocities']
         time = action_info['time']
         index = action_info['index']
-        print(f'[Debug] Leader action index: {index}, time: {time:.4f}s')
+        # print(f'[Debug] Leader action index: {index}, time: {time:.4f}s')
 
         actions = [joint_positions[i] for i,name in enumerate(joint_names) if 'joint' in name]
         return np.array(actions, dtype=dtype)
