@@ -53,7 +53,7 @@ def main():
     for ep_num in range(data.episode_exist_num):
         # print(f'[Info ] 에피소드 {ep_num} 녹화 시작...')
         
-
+        ep_num = 16
         data.setup(episode_num=ep_num)
         for i in tqdm(range(data.total_data_num), desc=f'Episode {ep_num} Recording'):
 
@@ -97,7 +97,7 @@ def main():
         print(f'[Info ] 에피소드 저장중...')
         dataset.save_episode()
         print(f'[Info ] 에피소드 저장 완료')
-
+        break
 
 
     dataset.finalize()
