@@ -62,7 +62,7 @@ def main():
             img_wrist = data.get_image_wrist()
 
             # 관절 변환
-            follower_numpy = data.get_follower_action(dtype=np.float32)
+            follower_numpy, time_stamp = data.get_follower_action(dtype=np.float32)
             leader_numpy = data.get_leader_action(shift=5, dtype=np.float32)
             data.step_idx += 1
 
@@ -76,6 +76,7 @@ def main():
                 'observation.state': follower_numpy,
                 'action': leader_numpy,
                 'task': TASK_DESCRIPTION,
+                'timestamp': time_stamp,
             }
             dataset.add_frame(frame_data)
 

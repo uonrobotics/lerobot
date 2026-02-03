@@ -60,7 +60,7 @@ class DataAggregator():
         index = action_info['index']
         # print(f'[Debug] Follower action index: {index}, time: {time:.4f}s')
         actions = [joint_positions[i] for i,name in enumerate(joint_names) if 'joint' in name]
-        return np.array(actions, dtype=dtype)
+        return np.array(actions, dtype=dtype) ,time
     
     
     def get_leader_action(self,shift=5, dtype=np.float32):
