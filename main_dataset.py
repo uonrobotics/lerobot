@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 
+import os
 import time
 import json
 import numpy as np
+import argparse
 
 np.set_printoptions(suppress=True, precision=2)
 
@@ -21,69 +23,72 @@ from trajectory_msgs.msg import JointTrajectory
 # My code
 from communicator.communicator import Communicator
 from visualizer.rerun_visualizer import init_rerun, log_rerun_visualization
-from data_convertor.data_coverter import (
-    convert_compressedImage_to_numpy,           # compressedImage -> np
-    convert_jointTrajectory_to_numpy_list,      # jointTrajectory -> np
-    convert_jointState_to_numpy_list            # jointState -> np
-)
+# from data_convertor.data_coverter import (
+#     convert_compressedImage_to_numpy,           # compressedImage -> np
+#     convert_jointTrajectory_to_numpy_list,      # jointTrajectory -> np
+#     convert_jointState_to_numpy_list            # jointState -> np
+# )
+
+
+# modified by jjh
+from data_convertor.data_coverter import DataConverter
+from robot.kinematics_solver import KinematicsSolver
 
 
 # ==============================
 # 전역 변수
 # ==============================
-ROOT_PATH = Path.home() / '.cache/huggingface/lerobot'
-HF_REPO_ID = "user1/repo4"                      # Repo_io (Dir)
-TASK_DESCRIPTION = "pick up the zipper bag"     # Task Instruction
-FPS = 30                                        # FPS
 
-STATUS = 'idel'                                 # 데이터 수집 상태 (idle, ready, record, save, cancel, done)
+STATUS = 'idle'                                 # 데이터 수집 상태 (idle, ready, record, save, cancel, done)
 IS_RECORDING = False                            # 녹화중 상태
 START_TIME = 0                                  # 녹화 시작 시간
 RECORDING_TIME = 0                              # 녹화한 시간
 
 
-# ==============================
-# Features
-# ==============================
-JOINT_ORDER = [
-    'right_joint1',
-    'right_joint2',
-    'right_joint3',
-    'right_joint4',
-    'right_joint5',
-    'right_joint6',
-    'right_rh_r1_joint'
-]
-FEATURES = {
-    'observation.images.cam_top': {
-        'dtype': 'video',
-        'shape': (720, 1280, 3),
-        'names': [
-            'height',
-            'width',
-            'channels'
-        ]
-    },
-    'observation.images.cam_wrist': {
-        'dtype': 'video',
-        'shape': (480, 848, 3),
-        'names': [
-            'height',
-            'width',
-            'channels'
-        ]
-    },
-    'observation.state': {
-        'dtype': 'float32',
-        'shape': (7,),
-        'names': JOINT_ORDER
-    },
-    'action': {
-        'dtype': 'float32',
-        'shape': (7,),
-        'names': JOINT_ORDER
-    },
-}
+
+
+# # ==============================
+# # Features
+# # ==============================
+# JOINT_ORDER = [
+#     'right_joint1',
+#     'right_joint2',
+#     'right_joint3',
+#     'right_joint4',
+#     'right_joint5',
+#     'right_joint6',
+#     'right_rh_r1_joint'
+# ]
+# FEATURES = {
+#     'observation.images.cam_top': {
+#         'dtype': 'video',
+#         'shape': (720, 1280, 3),
+#         'names': [
+#             'height',
+#             'width',
+#             'channels'
+#         ]
+#     },
+#     'observation.images.cam_wrist': {
+#         'dtype': 'video',
+#         'shape': (480, 848, 3),
+#         'names': [
+#             'height',
+#             'width',
+#             'channels'
+#         ]
+#     },
+#     'observation.state': {
+#         'dtype': 'float32',
+#         'shape': (7,),
+#         'names': JOINT_ORDER
+#     },
+#     'action': {
+#         'dtype': 'float32',
+#         'shape': (7,),
+#         'names': JOINT_ORDER
+#     },
+# }
 
 
 # ==============================
@@ -212,11 +217,133 @@ def create_lerobot_dataset(repo_id: str) -> LeRobotDataset | None:
     return dataset
 
 
+
+def set_initialization(args):
+    action_type_ = args.action_type
+
+    if action_type_ == "abs_joint":
+        observation_order_ = args.joint_names
+        action_order_ = args.joint_names
+
+        kinematics_solver_ = None
+
+    elif action_type_ == "delta_pose":
+        observation_order_ = [
+            'abs_x',
+            'abs_y',
+            'abs_z',
+            'abs_roll',
+            'abs_pitch',
+            'abs_yaw',
+            'gripper'
+        ]
+        action_order_ = [
+            'delta_x',
+            'delta_y',
+            'delta_z',
+            'delta_roll',
+            'delta_pitch',
+            'delta_yaw',
+            'delta_gripper' # right??
+        ]
+
+        kinematics_solver_ = KinematicsSolver(path_urdf=args.path_urdf, base_frame=args.base_frame, ee_frame=args.ee_frame)
+
+    else:
+        raise RuntimeError("error")
+
+    features_ = {
+        'observation.images.cam_top': {
+            'dtype': 'video',
+            'shape': (720, 1280, 3),
+            'names': [
+                'height',
+                'width',
+                'channels'
+            ]
+        },
+        'observation.images.cam_wrist': {
+            'dtype': 'video',
+            'shape': (480, 848, 3),
+            'names': [
+                'height',
+                'width',
+                'channels'
+            ]
+        },
+        'observation.state': {
+            'dtype': 'float32',
+            'shape': (7,),
+            'names': observation_order_
+        },
+        'action': {
+            'dtype': 'float32',
+            'shape': (7,),
+            'names': action_order_
+        },
+    }
+
+    return observation_order_, action_order_, features_, kinematics_solver_
+
+
+
+def parse_args(argv=None):
+    p = argparse.ArgumentParser(
+        description="arguments_tmp",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
+
+    # 기본
+    p.add_argument("--root_path", type=str, default=".cache/huggingface/lerobot")
+    p.add_argument("--hf_repo_id", type=str, default="user1") # data will be saved in {ROOT_PATH}/{hf_repo_id}/{dataset_name}/
+    p.add_argument("--dataset_name", type=str, default="test") # data will be saved in {ROOT_PATH}/{hf_repo_id}/{dataset_name}/
+    p.add_argument("--task_description", type=str, default="pick up the zipper bag")
+    p.add_argument("--fps", type=int, default=30)
+    p.add_argument("--action_type", type=str, default="delta_pose") # abs_joint, delta_pose, ... (to be updated later)
+    # p.add_argument("--lr", type=float, default=3e-4)
+
+    # robot
+    p.add_argument("--path_urdf", type=str, default="/home/uon/workspace/lerobot_jjh_dataset/lerobot/robot/omy_f3m.urdf")
+    p.add_argument("--base_frame", type=str, default="world")
+    p.add_argument("--ee_frame", type=str, default="end_effector_link")
+    p.add_argument("--joint_names", type=list, default=["joint1", "joint2", "joint3", "joint4", "joint5", "joint6", "rh_r1_joint"])
+
+    # ROS2
+    p.add_argument("--ROS_DOMAIN_ID", type=int, default=29)
+
+    # topic names
+    p.add_argument("--topic_name_cam_top", type=str, default="/camera/cam_top/color/image_raw/compressed")
+    p.add_argument("--topic_name_cam_wrist", type=str, default="/camera/cam_wrist/color/image_rect_raw/compressed")
+    p.add_argument("--topic_name_leader", type=str, default="/leader/joint_trajectory")
+    p.add_argument("--topic_name_follower", type=str, default="/joint_states")
+    p.add_argument("--topic_name_leader_pub", type=str, default="/leader/joint_trajectory")
+
+    args = p.parse_args(argv)
+
+    return args
+
+
+
 def main():
+    args = parse_args()
+    
     global IS_RECORDING, START_TIME, RECORDING_TIME, STATUS
 
+    global FPS
+    FPS = args.fps
+
+    global ROOT_PATH, PATH_SAVE_DATA
+    ROOT_PATH = Path.home() / args.root_path
+    PATH_SAVE_DATA = os.path.join(args.hf_repo_id, args.dataset_name)
+
+    global OBSERVATION_ORDER, ACTION_ORDER, FEATURES
+    OBSERVATION_ORDER, ACTION_ORDER, FEATURES, kinematics_solver = set_initialization(args)
+
+
+    dc = DataConverter(args, OBSERVATION_ORDER, ACTION_ORDER, kinematics_solver)
+
     # Rerun 초기화 ------------------------------
-    init_rerun(f'{HF_REPO_ID} Dataset')
+    init_rerun(f'{PATH_SAVE_DATA} Dataset')
     time.sleep(1)
     print()
 
@@ -226,7 +353,7 @@ def main():
         rclpy.init()
 
     # 커뮤니케이터 생성
-    communicator = Communicator()
+    communicator = Communicator(args)
     communicator.start() # 쓰레드 시작
 
 
@@ -240,7 +367,7 @@ def main():
           f'--------------------------')
 
     # 데이터셋 생성/불러오기 ------------------------
-    dataset = create_lerobot_dataset(HF_REPO_ID)
+    dataset = create_lerobot_dataset(PATH_SAVE_DATA)
     if dataset is None:
         return
 
@@ -273,11 +400,21 @@ def main():
 
 
 
-        # 데이터 변환 -----------------------------
-        img_top = convert_compressedImage_to_numpy(topic_msg['cam_top'])                        # cam_top
-        img_wrist = convert_compressedImage_to_numpy(topic_msg['cam_wrist'])                    # cam_wrist
-        follower_numpy = convert_jointState_to_numpy_list(topic_msg['follower'], JOINT_ORDER)   # state
-        leader_numpy = convert_jointTrajectory_to_numpy_list(topic_msg['leader'], JOINT_ORDER)  # action
+        # # 데이터 변환 -----------------------------
+        # img_top = convert_compressedImage_to_numpy(topic_msg['cam_top'])                        # cam_top
+        # img_wrist = convert_compressedImage_to_numpy(topic_msg['cam_wrist'])                    # cam_wrist
+        # follower_numpy = convert_jointState_to_numpy_list(topic_msg['follower'], OBSERVATION_ORDER, ACTION_ORDER, kinematics_solver)   # state
+        # leader_numpy = convert_jointTrajectory_to_numpy_list(topic_msg['leader'], OBSERVATION_ORDER, ACTION_ORDER, kinematics_solver)  # action
+
+        img_top, img_wrist, state_numpy, action_numpy = dc.convert(msg_img1=topic_msg['cam_top'], 
+                                                                    msg_img2=topic_msg['cam_wrist'], 
+                                                                    msg_joint_states=topic_msg['follower'], 
+                                                                    msg_joint_trajectory=topic_msg['leader'])
+        
+        print("=================================")
+        print(f"====state: {state_numpy}")
+        print(f"====action: {action_numpy}")
+
 
 
         # 상태 로직 분기 시작 -----------------------
@@ -296,17 +433,17 @@ def main():
             frame_data = {
                 'observation.images.cam_top': img_top,
                 'observation.images.cam_wrist': img_wrist,
-                'observation.state': follower_numpy,
-                'action': leader_numpy,
-                'task': TASK_DESCRIPTION,
+                'observation.state': state_numpy,
+                'action': action_numpy,
+                'task': args.task_description,
             }
             dataset.add_frame(frame_data)
 
             # Rerun 시각화
             log_rerun_visualization(
                 images={'cam_top': img_top, 'cam_wrist': img_wrist},
-                follower_joints=follower_numpy,
-                leader_joints=leader_numpy,
+                follower_joints=state_numpy,
+                leader_joints=action_numpy,
             )
 
             RECORDING_TIME = time.time() - START_TIME
@@ -347,7 +484,7 @@ def main():
 
 
     print(f'[Info ] 종료')
-    comm.destroy_node()
+    communicator.destroy_node()
     listener.stop()
     rclpy.shutdown()
 

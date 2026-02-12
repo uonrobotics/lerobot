@@ -11,7 +11,7 @@ from builtin_interfaces.msg import Duration
 
 # Communicator
 class Communicator(Node):
-    def __init__(self):
+    def __init__(self, args):
         super().__init__('Communicator_node')
         self.topic_msgs = {
             'cam_wrist': None,
@@ -23,14 +23,14 @@ class Communicator(Node):
         # 리더암 토픽 퍼블리셔 (팔로우암이 이 토픽을 읽어서 움직임)
         self.joint_pub = self.create_publisher(
             JointTrajectory,
-            '/right_robot/leader/joint_trajectory',
+            args.topic_name_leader_pub,
             100
         )
 
         # 손목 카메라 토픽
         self.sub_1 = self.create_subscription(
             CompressedImage,
-            '/right/camera/cam_wrist/color/image_rect_raw/compressed',
+            args.topic_name_cam_wrist,
             self.callback_topic_1,
             10
         )
@@ -38,7 +38,7 @@ class Communicator(Node):
         # 키넥트 토픽
         self.sub_2 = self.create_subscription(
             CompressedImage,
-            '/right/camera/cam_top/color/image_rect_raw/compressed',
+            args.topic_name_cam_top,
             self.callback_topic_2,
             10
         )
@@ -46,7 +46,7 @@ class Communicator(Node):
         # 리더암
         self.sub3 = self.create_subscription(
             JointTrajectory,
-            '/right_robot/leader/joint_trajectory',
+            args.topic_name_leader,
             self.callback_topic_3,
             10
         )
@@ -54,7 +54,7 @@ class Communicator(Node):
         # 팔로우암
         self.sub4 = self.create_subscription(
             JointState,
-            '/right/joint_states',
+            args.topic_name_follower,
             self.callback_topic_4,
             10
         )
