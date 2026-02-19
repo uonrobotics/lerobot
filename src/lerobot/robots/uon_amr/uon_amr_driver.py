@@ -9,8 +9,8 @@ import struct
 MAX_SPD             = 1500
 DEFAULT_MOTOR_BPS   = 115200
 
-MotorDriver_ID      = 2
-MotorDriver_ID_R    = 3
+MOTOR_LEFT_ID      = 2
+MOTOR_RIGHT_ID    = 3
 
 READ_CMD            = 0x03
 READ_SPD_H          = 0x20
@@ -123,6 +123,10 @@ class UONAMRDriver:
         # Parameters
         self.max_lin_vel = 3.0
         self.max_ang_vel = 1.7472
+        
+        # Feedback Variables
+        self.left_rpm_fb = 0.0
+        self.right_rpm_fb = 0.0
 
     def connect(self):
         try:
@@ -159,8 +163,8 @@ class UONAMRDriver:
         # 4. Hardware Stop (Extra Safety)
         if self.ser and self.ser.is_open:
             try:
-                self._set_word(MotorDriver_ID, WR_WORD_STOP)
-                self._set_word(MotorDriver_ID_R, WR_WORD_STOP)
+                self._set_word(MOTOR_LEFT_ID, WR_WORD_STOP)
+                self._set_word(MOTOR_RIGHT_ID, WR_WORD_STOP)
                 self.ser.close()
             except: pass
             
@@ -179,6 +183,30 @@ class UONAMRDriver:
             self.target_w = clip(w, -self.max_ang_vel, self.max_ang_vel)
             # Update watchdog timestamp
             self.last_command_time = time.time()
+            
+    def get_feedback(self):
+        """
+        현재 수신된 모터 RPM을 바탕으로 로봇의 실제 주행 속도(v, w)를 계산하여 반환합니다.
+        """
+        with self.lock:
+            rpm_l = self.left_rpm_fb
+            rpm_r = self.right_rpm_fb
+
+        # 1. RPM -> rad/s 변환 (60초로 나누고 2*PI 곱함)
+        omega_l = (rpm_l / 60.0) * (2.0 * math.pi)
+        omega_r = (rpm_r / 60.0) * (2.0 * math.pi)
+
+        # 2. 각 바퀴의 선속도 계산 (v = omega * R)
+        v_l = omega_l * self.wheel_radius
+        v_r = omega_r * self.wheel_radius
+
+        # 3. 차륜형 로봇 기구학 역산 (C++ loop_control 수식 참고)
+        # v = (v_l + v_r) / 2
+        # w = (v_l - v_r) / Wheel_Separation
+        curr_v = (v_l + v_r) / 2.0
+        curr_w = (v_l - v_r) / self.wheel_sep
+
+        return curr_v, curr_w
 
     # ------------------------------------------------------------------
     # Background Scheduler Loop
@@ -237,25 +265,25 @@ class UONAMRDriver:
     def _run_init_scheduler(self):
         step = self.init_scheduler
         
-        if step == 0: self._set_comm_offline_time(MotorDriver_ID, 500)
-        elif step == 1: self._set_vel_mode(MotorDriver_ID)
-        elif step == 2: self._set_acc_time(MotorDriver_ID, DEFAULT_ACC_TIME)
-        elif step == 3: self._set_dacc_time(MotorDriver_ID, DEFAULT_DACC_TIME)
-        elif step == 4: self._set_word(MotorDriver_ID, WR_WORD_QUICKSTOP)
+        if step == 0: self._set_comm_offline_time(MOTOR_LEFT_ID, 500)
+        elif step == 1: self._set_vel_mode(MOTOR_LEFT_ID)
+        elif step == 2: self._set_acc_time(MOTOR_LEFT_ID, DEFAULT_ACC_TIME)
+        elif step == 3: self._set_dacc_time(MOTOR_LEFT_ID, DEFAULT_DACC_TIME)
+        elif step == 4: self._set_word(MOTOR_LEFT_ID, WR_WORD_QUICKSTOP)
         
-        elif step == 5: self._set_comm_offline_time(MotorDriver_ID_R, 500)
-        elif step == 6: self._set_vel_mode(MotorDriver_ID_R)
-        elif step == 7: self._set_acc_time(MotorDriver_ID_R, DEFAULT_ACC_TIME)
-        elif step == 8: self._set_dacc_time(MotorDriver_ID_R, DEFAULT_DACC_TIME)
-        elif step == 9: self._set_word(MotorDriver_ID_R, WR_WORD_QUICKSTOP)
+        elif step == 5: self._set_comm_offline_time(MOTOR_RIGHT_ID, 500)
+        elif step == 6: self._set_vel_mode(MOTOR_RIGHT_ID)
+        elif step == 7: self._set_acc_time(MOTOR_RIGHT_ID, DEFAULT_ACC_TIME)
+        elif step == 8: self._set_dacc_time(MOTOR_RIGHT_ID, DEFAULT_DACC_TIME)
+        elif step == 9: self._set_word(MOTOR_RIGHT_ID, WR_WORD_QUICKSTOP)
         
-        elif step == 10: self._set_word(MotorDriver_ID, WR_WORD_CLEARFAULT)
-        elif step == 11: self._set_word(MotorDriver_ID_R, WR_WORD_CLEARFAULT)
+        elif step == 10: self._set_word(MOTOR_LEFT_ID, WR_WORD_CLEARFAULT)
+        elif step == 11: self._set_word(MOTOR_RIGHT_ID, WR_WORD_CLEARFAULT)
         
         elif step == 12:
-            self._set_word(MotorDriver_ID, WR_WORD_ENABLE)
+            self._set_word(MOTOR_LEFT_ID, WR_WORD_ENABLE)
             time.sleep(0.01)
-            self._set_word(MotorDriver_ID_R, WR_WORD_ENABLE)
+            self._set_word(MOTOR_RIGHT_ID, WR_WORD_ENABLE)
             self.is_init_done = True
             print("[Driver] Init Sequence Complete. Motors Enabled.")
         
@@ -270,20 +298,38 @@ class UONAMRDriver:
         step = self.comm_scheduler
         
         if step == 0: # Write Left
-            self._set_rpm(MotorDriver_ID, self.Target_LeftRPM)
+            self._set_rpm(MOTOR_LEFT_ID, self.Target_LeftRPM)
         elif step == 1: # Write Right
-            self._set_rpm(MotorDriver_ID_R, self.Target_RightRPM)
+            self._set_rpm(MOTOR_RIGHT_ID, self.Target_RightRPM)
         elif step == 2: # Read Left 
-            self._read_bulk(MotorDriver_ID)
+            self._read_bulk(MOTOR_LEFT_ID)
         elif step == 3: # Read Right
-            self._read_bulk(MotorDriver_ID_R)
+            self._read_bulk(MOTOR_RIGHT_ID)
             
         self.comm_scheduler = (self.comm_scheduler + 1) % 4
         time.sleep(0.002) 
 
     def _packet_process(self):
-        if self.ser.in_waiting > 0:
-            self.ser.read(self.ser.in_waiting)
+        # C++ 코드의 GetLength() >= 8 조건 반영
+        if self.ser.in_waiting >= 11: # Bulk Read 응답은 보통 11바이트
+            raw_data = self.ser.read(self.ser.in_waiting)
+            
+            # C++의 for 루프처럼 패킷 시작점 탐색
+            for i in range(len(raw_data) - 10):
+                # ID 확인 및 READ_CMD(0x03), 응답 길이(6바이트 데이터) 확인
+                if raw_data[i+1] == READ_CMD and raw_data[i+2] == 6:
+                    # CRC 검증 로직 (C++의 GetCRC와 동일하게 계산 필요)
+                    
+                    # RPM 파싱: pBuffer[i+3]<<8 | pBuffer[i+4]
+                    rpm_raw = struct.unpack(">h", raw_data[i+3:i+5])[0]
+                    actual_rpm = rpm_raw / 10.0
+                    
+                    with self.lock:
+                        if raw_data[i] == MOTOR_LEFT_ID:
+                            self.left_rpm_fb = actual_rpm
+                        elif raw_data[i] == MOTOR_RIGHT_ID:
+                            self.right_rpm_fb = -actual_rpm # C++의 우측 반전 로직 반영
+                    break
 
     # ------------------------------------------------------------------
     # Packet Builders

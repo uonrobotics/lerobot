@@ -18,10 +18,9 @@
 import logging
 import time
 import threading
-import struct
 from dataclasses import dataclass, field
 from functools import cached_property
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict
 
 import numpy as np
 import serial
@@ -338,26 +337,32 @@ class ThreadedLidar:
             # Essential for S2: Force a clean start state
             self.lidar.stop()
             self.lidar.start_motor()
+            
             time.sleep(1.0) 
+            
             self.lidar.clean_input()
             
             self.running = True
             self.thread = threading.Thread(target=self._run, daemon=True)
             self.thread.start()
             logger.info("✅ [Lidar] Thread started")
+            
         except Exception as e: 
             logger.error(f"❌ [Lidar] Start failed: {e}")
 
     def stop(self):
         self.running = False
+        
         if self.thread:
             self.thread.join(timeout=2.0)
+            
         if self.lidar:
             try:
                 self.lidar.stop()
                 self.lidar.stop_motor()
                 self.lidar.disconnect()
-            except: pass
+            except: 
+                pass
 
     def _run(self):
         """Your original logic, wrapped for resilience."""
@@ -366,7 +371,8 @@ class ThreadedLidar:
                 # max_buf_meas를 늘려 CPU가 바쁠 때 버퍼링 허용
                 # S2는 초당 최대 32,000포트를 쏘기 때문에 버퍼가 커야 합니다.
                 for scan in self.lidar.iter_scans(max_buf_meas=4000):
-                    if not self.running: break
+                    if not self.running: 
+                        break
                     
                     temp = np.zeros(360, dtype=np.float32)
                     for (_, angle, distance) in scan: 
@@ -381,7 +387,8 @@ class ThreadedLidar:
                     logger.warning(f"⚠️ [Lidar] Sync lost: {e}. Rapid recovery...")
                     try:
                         self.lidar.clean_input() 
-                    except: pass
+                    except: 
+                        pass
                 continue
 
     def get_scan(self):
@@ -390,31 +397,51 @@ class ThreadedLidar:
 
 class UONBatteryDriver:
     def __init__(self, port, baudrate=19200):
-        self.port = port; self.baudrate = baudrate
-        self.ser = None; self.running = False; self.thread = None; self.lock = threading.Lock()
-        self.soc = 0.0; self.voltage = 0.0; self.ampere = 0.0; self.has_printed_banner = False
+        self.port = port
+        self.baudrate = baudrate
+        self.ser = None
+        self.running = False
+        self.thread = None
+        self.lock = threading.Lock()
+        self.soc = 0.0
+        self.voltage = 0.0
+        self.ampere = 0.0
+        self.has_printed_banner = False
         self.req_msg = bytearray([0xAF, 0xFA, 0x60, 0x05, 0x01, 0x60, 0x7F, 0x07, 0x00, 0xAF, 0xA0])
         self.req_msg[8] = sum(self.req_msg[2:8]) & 0xFF
 
     def start(self):
         try:
             self.ser = serial.Serial(self.port, self.baudrate, timeout=0.5)
-            self.running = True; self.thread = threading.Thread(target=self._run, daemon=True)
+            self.running = True
+            self.thread = threading.Thread(target=self._run, daemon=True)
             self.thread.start()
             logger.info(f"✅ [Battery] Connected to {self.port}")
-        except Exception as e: logger.warning(f"⚠️ [Battery] Connection failed: {e}")
+            
+        except Exception as e: 
+            logger.warning(f"⚠️ [Battery] Connection failed: {e}")
 
     def stop(self):
         self.running = False
-        if self.thread: self.thread.join(timeout=1.0)
-        if self.ser: self.ser.close()
+        
+        if self.thread: 
+            self.thread.join(timeout=1.0)
+            
+        if self.ser:
+            self.ser.close()
 
     def _run(self):
         while self.running and self.ser:
             try:
-                self.ser.reset_input_buffer(); self.ser.write(self.req_msg)
-                buffer = bytearray(); chunk = self.ser.read(35)
-                if chunk: buffer.extend(chunk)
+                self.ser.reset_input_buffer()
+                self.ser.write(self.req_msg)
+                
+                buffer = bytearray()
+                chunk = self.ser.read(35)
+                
+                if chunk: 
+                    buffer.extend(chunk)
+                    
                 if len(buffer) >= 29:
                     for i in range(len(buffer) - 28):
                         if (buffer[i] == 0xAF and buffer[i+1] == 0xFA and buffer[i+2] == 0x60 and buffer[i+3] == 0x17):
@@ -423,12 +450,19 @@ class UONBatteryDriver:
                                 raw_amps = (buffer[i+8] << 8) | buffer[i+9]
                                 self.ampere = (raw_amps - 65536 if raw_amps > 32767 else raw_amps) * 0.01
                                 self.soc = ((buffer[i+10] << 8) | buffer[i+11]) / 100.0
-                            if not self.has_printed_banner: self._print_banner(); self.has_printed_banner = True
+                            if not self.has_printed_banner: 
+                                self._print_banner()
+                                self.has_printed_banner = True
                             break
+                        
                 for _ in range(20): 
-                    if not self.running: break
+                    if not self.running:
+                        break
+                    
                     time.sleep(0.1)
-            except Exception: time.sleep(1.0)
+                    
+            except Exception: 
+                time.sleep(1.0)
 
     def _print_banner(self):
         soc_val = int(self.soc * 100)
@@ -469,37 +503,63 @@ class UONAMR(Robot):
         self._is_connected = False
         self.cameras = config.cameras
         self.driver = UONAMRDriver(config.motor_port)
-        self.lidar_driver = None; self.battery_driver = None; self.orbbec_driver = None
-        self._current_lin = 0.0; self._current_ang = 0.0
+        self.lidar_driver = None
+        self.battery_driver = None
+        self.orbbec_driver = None
         self._latest_scan = np.zeros(360, dtype=np.float32)
         
     @property
-    def is_connected(self) -> bool: return self._is_connected
+    def is_connected(self) -> bool: 
+        return self._is_connected
+    
     @property
-    def is_calibrated(self) -> bool: return True
+    def is_calibrated(self) -> bool: 
+        return True
 
     def connect(self) -> None:
-        if self._is_connected: raise DeviceAlreadyConnectedError(f"{self.name} connected")
+        if self._is_connected: 
+            raise DeviceAlreadyConnectedError(f"{self.name} connected")
+        
         logger.info(f"Connecting {self.name}...")
-        try: self.driver.connect(); logger.info("✅ Motors connected")
-        except Exception as e: logger.error(f"❌ Motors failed: {e}")
-        if LIDAR_AVAILABLE: self._connect_lidar()
+        
+        try: 
+            self.driver.connect()
+            logger.info("✅ Motors connected")
+        except Exception as e: 
+            logger.error(f"❌ Motors failed: {e}")
+            
+        if LIDAR_AVAILABLE: 
+            self._connect_lidar()
+            
         self._connect_battery()
         self._connect_camera()
         self._is_connected = True
 
     def disconnect(self) -> None:
-        if not self._is_connected: raise DeviceNotConnectedError(f"{self.name} disconnected")
-        try: self.driver.send_velocity(0.0, 0.0); self.driver.disconnect()
-        except Exception: pass
-        if self.orbbec_driver: self.orbbec_driver.stop()
-        if self.lidar_driver: self.lidar_driver.stop()
-        if self.battery_driver: self.battery_driver.stop()
+        if not self._is_connected: 
+            raise DeviceNotConnectedError(f"{self.name} disconnected")
+        
+        try: 
+            self.driver.send_velocity(0.0, 0.0)
+            self.driver.disconnect()
+        except Exception:
+            pass
+        
+        if self.orbbec_driver: 
+            self.orbbec_driver.stop()
+        if self.lidar_driver: 
+            self.lidar_driver.stop()
+        if self.battery_driver: 
+            self.battery_driver.stop()
+            
         self._is_connected = False
         logger.info(f"{self.name} disconnected")
 
-    def calibrate(self) -> None: pass
-    def configure(self) -> None: pass
+    def calibrate(self) -> None: 
+        pass
+    
+    def configure(self) -> None:
+        pass
 
     @cached_property
     def observation_features(self) -> Dict[str, Any]:
@@ -511,7 +571,10 @@ class UONAMR(Robot):
             OBS_ANGULAR_VEL: float,
             OBS_BATTERY_LEVEL: float,
         }
-        for key in LIDAR_KEYS: features[key] = float
+        
+        for key in LIDAR_KEYS: 
+            features[key] = float
+            
         return features
 
     @cached_property
@@ -538,49 +601,68 @@ class UONAMR(Robot):
         depth_encoded[:, :, 1] = (depth_raw >> 8) & 0xFF
 
         batt_level = self.battery_driver.get_soc() if self.battery_driver else 1.0
+        
+        curr_v, curr_w = self.driver.get_feedback()
 
         obs = {
             OBS_FRONT_RGB: rgb,
             OBS_FRONT_DEPTH: depth_vis,
             OBS_FRONT_DEPTH_RAW: depth_encoded,
-            OBS_LINEAR_VEL: self._current_lin,
-            OBS_ANGULAR_VEL: self._current_ang,
+            OBS_LINEAR_VEL: curr_v,
+            OBS_ANGULAR_VEL: curr_w,
             OBS_BATTERY_LEVEL: batt_level,
         }
         obs.update(zip(LIDAR_KEYS, self._latest_scan))
         return obs
 
     def send_action(self, action: Dict[str, Any] | np.ndarray) -> Dict[str, Any]:
-        if not self._is_connected: raise DeviceNotConnectedError(f"{self.name} not connected")
+        if not self._is_connected: 
+            raise DeviceNotConnectedError(f"{self.name} not connected")
+        
         lin, ang = 0.0, 0.0
+        
         if isinstance(action, dict):
-            if ACTION_LINEAR_VEL in action: lin, ang = float(action[ACTION_LINEAR_VEL]), float(action[ACTION_ANGULAR_VEL])
-            elif "v" in action: lin, ang = float(action["v"]), float(action["w"])
+            if ACTION_LINEAR_VEL in action: 
+                lin, ang = float(action[ACTION_LINEAR_VEL]), float(action[ACTION_ANGULAR_VEL])
+            elif "v" in action: 
+                lin, ang = float(action["v"]), float(action["w"])
             else:
                 raw = list(action.values())[0]
-                if hasattr(raw, "cpu"): raw = raw.cpu().numpy()
+                if hasattr(raw, "cpu"): 
+                    raw = raw.cpu().numpy()
                 lin, ang = float(raw[0]), float(raw[1])
         else:
             raw = action
-            if hasattr(raw, "cpu"): raw = raw.cpu().numpy()
-            if len(raw.shape) > 1: raw = raw.flatten()
+            if hasattr(raw, "cpu"): 
+                raw = raw.cpu().numpy()
+            if len(raw.shape) > 1: 
+                raw = raw.flatten()
             lin, ang = float(raw[0]), float(raw[1])
 
         try:
             self.driver.send_velocity(lin, ang)
-            self._current_lin, self._current_ang = lin, ang
+
         except Exception: pass
         return {ACTION_LINEAR_VEL: lin, ACTION_ANGULAR_VEL: ang}
 
     def _connect_lidar(self):
-        if not LIDAR_AVAILABLE: return
+        if not LIDAR_AVAILABLE: 
+            return
+        
         try:
             with serial.Serial(self.config.lidar_port, self.config.lidar_baudrate, timeout=0.1) as tmp:
-                tmp.dtr = False; tmp.rts = False; time.sleep(0.1)
-                tmp.dtr = True; tmp.rts = True; time.sleep(0.2)
-                tmp.write(b'\xA5\x25'); time.sleep(0.1)
+                tmp.dtr = False
+                tmp.rts = False
+                time.sleep(0.1)
+                tmp.dtr = True
+                tmp.rts = True
+                time.sleep(0.2)
+                tmp.write(b'\xA5\x25')
+                time.sleep(0.1)
                 tmp.reset_input_buffer()
-        except Exception: pass
+        except Exception: 
+                pass
+            
         self.lidar_driver = ThreadedLidar(self.config.lidar_port, self.config.lidar_baudrate)
         self.lidar_driver.start()
 
