@@ -13,7 +13,7 @@ from tqdm import tqdm
 # 전역 변수
 # ==============================
 
-TASK_DESCRIPTION = "put the food in the box"     # Task Instruction
+TASK_DESCRIPTION = "put the apple in the box"     # Task Instruction
 
 
 IS_RECORDING = False
@@ -53,7 +53,7 @@ def main():
     for ep_num in range(data.episode_exist_num):
         # print(f'[Info ] 에피소드 {ep_num} 녹화 시작...')
         
-        ep_num = 16
+        # ep_num = 16
         data.setup(episode_num=ep_num)
         for i in tqdm(range(data.total_data_num), desc=f'Episode {ep_num} Recording'):
 
@@ -67,8 +67,6 @@ def main():
             data.step_idx += 1
 
 
-
-            START_TIME = time.time()
 
             frame_data = {
                 'observation.images.cam_top': img_top,
@@ -88,17 +86,11 @@ def main():
             #     leader_joints=leader_numpy,
             # )
 
-            RECORDING_TIME = time.time() - START_TIME
-            # print(f'\b\r[Info ] Recording: {RECORDING_TIME:.2f}s', end='\n') # 녹화 시간
-
-            # elapsed = time.time() - loop_start
-            # sleep_time = max(0, (1.0 / cfg.FPS) - elapsed)
-            # time.sleep(sleep_time)
 
         print(f'[Info ] 에피소드 저장중...')
         dataset.save_episode()
         print(f'[Info ] 에피소드 저장 완료')
-        break
+
 
 
     dataset.finalize()

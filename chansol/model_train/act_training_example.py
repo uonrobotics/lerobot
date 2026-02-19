@@ -11,8 +11,17 @@ from lerobot.policies.act.configuration_act import ACTConfig
 from lerobot.policies.act.modeling_act import ACTPolicy
 from lerobot.policies.factory import make_pre_post_processors
 from tqdm import tqdm
-
-
+import wandb
+wandb.init(
+    project="isaac_omy_put_food_act",   # 프로젝트 이름
+    name="test_1",                   # 실험 이름 (선택)
+    config={
+        "lr": 1e-5,
+        "batch_size": 16,
+        "epochs": 40,
+        "model": "act",
+    }
+)
 def make_delta_timestamps(delta_indices: list[int] | None, fps: int) -> list[float]:
     if delta_indices is None:
         return [0]
@@ -29,8 +38,8 @@ def main():
     optim_name = "adamw" ## "adamw" or "sgd"
     batch_size = 16
     training_steps = int(1e5)
-    log_freq = 1
-    save_step = 100
+    log_freq = 20
+    save_step = 10000
 
     # Select your device
     device = torch.device("cuda")  # or "cuda" or "cpu"
@@ -70,7 +79,10 @@ def main():
     }
 
     # Instantiate the dataset
-    dataset = LeRobotDataset(dataset_id, delta_timestamps=delta_timestamps)
+    dataset = LeRobotDataset(
+        dataset_id, 
+        root=dataset_root_path,
+        delta_timestamps=delta_timestamps)
 
     # Create the optimizer and dataloader for offline training
     if optim_name =="adamw":
@@ -88,7 +100,19 @@ def main():
         pin_memory=device.type != "cpu",
         drop_last=True,
     )
-    import pdb; pdb.set_trace()
+
+    ###### debuging #############
+    # data = iter(dataloader)
+    # batch = next(data)
+    # batch_action = batch['action']
+    # pre_action  = preprocessor(batch)["action"]
+    # import matplotlib.pyplot as plt
+    # plt.plot(batch_action[0].cpu().numpy(), label='orig', c ='orange')
+    # plt.plot(pre_action[0].cpu().numpy(), label='preproc', c ='blue')
+    # plt.legend()
+    # plt.show()
+
+    
 
     # Run training loop
     step = 0
@@ -108,7 +132,10 @@ def main():
             )
 
             if step % log_freq == 0:
-                pass
+                wandb.log({
+                    "train/loss": loss.item(),
+                    "train/step": step,
+                })
             if step % save_step == 0 and step != 0:
                 output_path = Path(f"{output_directory}_{optim_name}_{step:06d}steps_{batch_size}bs")
                 output_path.mkdir(parents=True, exist_ok=True)
@@ -121,7 +148,7 @@ def main():
                 break
 
 
-
+    wandb.finish()
 
     # Save all assets to the Hub
     # policy.push_to_hub(dataset_id)
