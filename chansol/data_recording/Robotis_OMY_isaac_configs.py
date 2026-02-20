@@ -1,5 +1,5 @@
 from pathlib import Path
-DEFAULT_SAVE_ROOT_PATH = Path("/nas/Dataset/VLA/UON/Isaacsim_OMY")
+DEFAULT_SAVE_ROOT_PATH = Path("/nas/Dataset/VLA/UON/Isaacsim_OMY_apple_picking")
 FPS = 25                                           
 HF_REPO_ID = "user1/repo1"                     
 FEATURES = {

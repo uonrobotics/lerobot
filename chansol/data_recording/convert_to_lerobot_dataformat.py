@@ -13,15 +13,12 @@ from tqdm import tqdm
 # 전역 변수
 # ==============================
 
-TASK_DESCRIPTION = "put the food in the box"     # Task Instruction
+TASK_DESCRIPTION = "put the apple in the box"     # Task Instruction
 
 
-IS_RECORDING = False
-START_TIME = time.time()
-RECORDING_TIME = 0
 
 data = DataAggregator(cfg.DEFAULT_SAVE_ROOT_PATH)
-
+save_path = f"{cfg.DEFAULT_SAVE_ROOT_PATH}_shift1"#cfg.DEFAULT_SAVE_ROOT_PATH
 
 def main():
     # ------------------------------
@@ -42,13 +39,13 @@ def main():
         repo_id=cfg.HF_REPO_ID,
         fps=cfg.FPS,
         features=cfg.FEATURES,
-        root = cfg.DEFAULT_SAVE_ROOT_PATH,
+        root = save_path,
         robot_type='omy_f3m',
         use_videos=True,
         image_writer_processes=4,
         image_writer_threads=8,
     )
-    print(f'[Info ] 새 데이터셋 생성됨: {cfg.DEFAULT_SAVE_ROOT_PATH / cfg.HF_REPO_ID}')
+    print(f'[Info ] 새 데이터셋 생성됨: {save_path}')
 
     for ep_num in range(data.episode_exist_num):
         # print(f'[Info ] 에피소드 {ep_num} 녹화 시작...')
@@ -63,7 +60,7 @@ def main():
 
             # 관절 변환
             follower_numpy, time_stamp = data.get_follower_action(dtype=np.float32)
-            leader_numpy = data.get_leader_action(shift=5, dtype=np.float32)
+            leader_numpy = data.get_leader_action(shift=1, dtype=np.float32)
             data.step_idx += 1
 
 

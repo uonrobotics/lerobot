@@ -20,11 +20,11 @@ import numpy as np
 
 
 # pre_trained_path = "/home/uon/ochansol/lerobot/chansol/model_train/weights/isaac_omy_put_food_act_adamw_090000steps_16bs"
-pre_trained_path = "/nas/AI_Checkpoints/VLA/act/act_demo_apple_pepper_1+2_batch16/checkpoints/last/pretrained_model"
-# pre_trained_path = "/home/uon/ochansol/lerobot/chansol/model_train/weights/isaac_omy_put_apple_act_adamw_090000steps_16bs"
+# pre_trained_path = "/nas/AI_Checkpoints/VLA/act/act_demo_apple_pepper_1+2_batch16/checkpoints/last/pretrained_model"
+pre_trained_path = "/home/uon/ochansol/lerobot/chansol/model_train/weights/isaac_omy_put_apple_act_adamw_090000steps_16bs"
 
-# dataset_root_path = "/nas/Dataset/VLA/UON/Isaacsim_OMY"
-dataset_root_path = "/nas/Dataset/VLA/UON/omy_f3m_demo_apple_pepper_1+2"
+dataset_root_path = "/nas/Dataset/VLA/UON/Isaacsim_OMY_apple_picking"
+# dataset_root_path = "/nas/Dataset/VLA/UON/omy_f3m_demo_apple_pepper_1+2"
 dataset_id = "user1/repo1"
 
 
