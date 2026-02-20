@@ -15,7 +15,7 @@ import wandb
 wandb.init(
     project="isaac_omy_put_apple_act",   # 프로젝트 이름
     name="test_1",                   # 실험 이름 (선택)
-    resume="allow",                   # 중단된 실험이 있으면 이어서 실행
+    resume="allow",                   # 이전 실험이 있으면 이어서 진행
     config={
         "lr": 1e-5,
         "batch_size": 16,
@@ -35,7 +35,9 @@ def main():
 
     dataset_id = "user1/repo1"
     dataset_root_path = "/nas/Dataset/VLA/UON/Isaacsim_OMY_apple_picking"
-    pre_checkpoint_path = "/nas/AI_Checkpoints/VLA/act/isaac_omy_put_apple_act_adamw_090000steps_16bs"
+    pre_checkpoint_path = "/nas/AI_Checkpoints/VLA/act/isaac_omy_put_apple_act_adamw_090000steps_16bs"#"/home/uon/ochansol/lerobot/chansol/model_train/weights/isaac_omy_put_food_act"
+    optim_name = "adamw" ## "adamw" or "sgd"
+    batch_size = 16
     training_steps = int(1.5e5)
     log_freq = 20
     save_step = 10000
