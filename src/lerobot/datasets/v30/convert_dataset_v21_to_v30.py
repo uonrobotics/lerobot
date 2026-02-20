@@ -469,7 +469,8 @@ def convert_dataset(
 
     # Set root based on whether local dataset path is provided
     use_local_dataset = False
-    root = HF_LEROBOT_HOME / repo_id if root is None else Path(root) / repo_id
+    
+    root = HF_LEROBOT_HOME / repo_id if root is None else Path(root)
     if root.exists():
         validate_local_dataset_version(root)
         use_local_dataset = True

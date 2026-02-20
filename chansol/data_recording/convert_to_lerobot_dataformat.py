@@ -13,7 +13,7 @@ from tqdm import tqdm
 # 전역 변수
 # ==============================
 
-TASK_DESCRIPTION = "put the apple in the box"     # Task Instruction
+TASK_DESCRIPTION = "put the food in the box"     # Task Instruction
 
 
 IS_RECORDING = False

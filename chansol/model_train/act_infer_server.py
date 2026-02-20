@@ -18,11 +18,18 @@ from typing import Any, Dict, Callable, Optional, Set, Tuple
 from typing_extensions import override
 import numpy as np
 
-device = torch.device("cuda")  # or "cuda" or "cpu" or "mps"
-pre_trained_path = "/home/uon/ochansol/lerobot/chansol/model_train/weights/isaac_omy_put_food_act_adamw_090000steps_16bs"
-model = ACTPolicy.from_pretrained(pretrained_name_or_path=pre_trained_path)
-dataset_root_path = "/nas/Dataset/VLA/UON/Isaacsim_OMY"
+
+# pre_trained_path = "/home/uon/ochansol/lerobot/chansol/model_train/weights/isaac_omy_put_food_act_adamw_090000steps_16bs"
+pre_trained_path = "/nas/AI_Checkpoints/VLA/act/act_demo_apple_pepper_1+2_batch16/checkpoints/last/pretrained_model"
+# pre_trained_path = "/home/uon/ochansol/lerobot/chansol/model_train/weights/isaac_omy_put_apple_act_adamw_090000steps_16bs"
+
+# dataset_root_path = "/nas/Dataset/VLA/UON/Isaacsim_OMY"
+dataset_root_path = "/nas/Dataset/VLA/UON/omy_f3m_demo_apple_pepper_1+2"
 dataset_id = "user1/repo1"
+
+
+model = ACTPolicy.from_pretrained(pretrained_name_or_path=pre_trained_path)
+device = torch.device("cuda")  # or "cuda" or "cpu" or "mps"
 # This only downloads the metadata for the dataset, ~10s of MB even for large-scale datasets
 dataset_metadata = LeRobotDatasetMetadata(
     repo_id=dataset_id,

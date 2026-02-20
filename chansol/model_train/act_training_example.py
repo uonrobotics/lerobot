@@ -13,8 +13,9 @@ from lerobot.policies.factory import make_pre_post_processors
 from tqdm import tqdm
 import wandb
 wandb.init(
-    project="isaac_omy_put_food_act",   # 프로젝트 이름
+    project="isaac_omy_put_apple_act",   # 프로젝트 이름
     name="test_1",                   # 실험 이름 (선택)
+    resume="allow",                   # 중단된 실험이 있으면 이어서 실행
     config={
         "lr": 1e-5,
         "batch_size": 16,
@@ -30,14 +31,12 @@ def make_delta_timestamps(delta_indices: list[int] | None, fps: int) -> list[flo
 
 
 def main():
-    output_directory = Path("/home/uon/ochansol/lerobot/chansol/model_train/weights/isaac_omy_put_food_act")
+    output_directory = Path("/home/uon/ochansol/lerobot/chansol/model_train/weights/isaac_omy_put_apple_act")
 
     dataset_id = "user1/repo1"
-    dataset_root_path = "/nas/Dataset/VLA/UON/Isaacsim_OMY"
-    pre_checkpoint_path = ""#"/home/uon/ochansol/lerobot/chansol/model_train/weights/isaac_omy_put_food_act"
-    optim_name = "adamw" ## "adamw" or "sgd"
-    batch_size = 16
-    training_steps = int(1e5)
+    dataset_root_path = "/nas/Dataset/VLA/UON/Isaacsim_OMY_apple_picking"
+    pre_checkpoint_path = "/home/uon/ochansol/lerobot/chansol/model_train/weights/isaac_omy_put_apple_act_adamw_090000steps_16bs"
+    training_steps = int(1.5e5)
     log_freq = 20
     save_step = 10000
 
