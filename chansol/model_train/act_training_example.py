@@ -31,11 +31,11 @@ def make_delta_timestamps(delta_indices: list[int] | None, fps: int) -> list[flo
 
 
 def main():
-    output_directory = Path("/home/uon/ochansol/lerobot/chansol/model_train/weights/isaac_omy_put_apple_act")
+    output_directory = Path("/nas/AI_Checkpoints/VLA/act/isaac_omy_put_apple")
 
     dataset_id = "user1/repo1"
     dataset_root_path = "/nas/Dataset/VLA/UON/Isaacsim_OMY_apple_picking"
-    pre_checkpoint_path = "/home/uon/ochansol/lerobot/chansol/model_train/weights/isaac_omy_put_apple_act_adamw_090000steps_16bs"
+    pre_checkpoint_path = "/nas/AI_Checkpoints/VLA/act/isaac_omy_put_apple_act_adamw_090000steps_16bs"
     training_steps = int(1.5e5)
     log_freq = 20
     save_step = 10000
