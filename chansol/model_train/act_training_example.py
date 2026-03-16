@@ -18,9 +18,10 @@ wandb.init(
     resume="allow",                   # 이전 실험이 있으면 이어서 진행
     config={
         "lr": 1e-5,
-        "batch_size": 16,
-        "epochs": 40,
+        "batch_size": 10,
         "model": "act",
+        "dataset_path": "/nas/Dataset/VLA/UON/Isaacsim_OMY_apple_picking_auto_shift4",
+        "training_steps": int(1.5e5),
     }
 )
 def make_delta_timestamps(delta_indices: list[int] | None, fps: int) -> list[float]:
@@ -31,14 +32,14 @@ def make_delta_timestamps(delta_indices: list[int] | None, fps: int) -> list[flo
 
 
 def main():
-    output_directory = Path("/nas/AI_Checkpoints/VLA/act/isaac_omy_put_apple")
+    output_directory = Path("/nas/AI_Checkpoints/VLA/act/isaac_omy_put_apple_auto_shift4")
 
     dataset_id = "user1/repo1"
-    dataset_root_path = "/nas/Dataset/VLA/UON/Isaacsim_OMY_apple_picking"
-    pre_checkpoint_path = "/nas/AI_Checkpoints/VLA/act/isaac_omy_put_apple_act_adamw_090000steps_16bs"#"/home/uon/ochansol/lerobot/chansol/model_train/weights/isaac_omy_put_food_act"
+    dataset_root_path = "/nas/Dataset/VLA/UON/Isaacsim_OMY_apple_picking_auto_shift4" #"/nas/Dataset/VLA/UON/Isaacsim_OMY_apple_picking_auto" --- IGNORE ---
+    pre_checkpoint_path = ""#"/home/uon/ochansol/lerobot/chansol/model_train/weights/isaac_omy_put_food_act"
     optim_name = "adamw" ## "adamw" or "sgd"
-    batch_size = 16
-    training_steps = int(1.5e5)
+    batch_size = wandb.config.batch_size
+    training_steps = wandb.config.training_steps
     log_freq = 20
     save_step = 10000
 
