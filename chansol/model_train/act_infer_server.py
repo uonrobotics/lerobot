@@ -21,9 +21,11 @@ import numpy as np
 
 # pre_trained_path = "/home/uon/ochansol/lerobot/chansol/model_train/weights/isaac_omy_put_food_act_adamw_090000steps_16bs"
 # pre_trained_path = "/nas/AI_Checkpoints/VLA/act/act_demo_apple_pepper_1+2_batch16/checkpoints/last/pretrained_model"
-pre_trained_path = "/nas/AI_Checkpoints/VLA/act/isaac_omy_put_apple_act_adamw_110000steps_16bs"
+pre_trained_path = "/nas/AI_Checkpoints/VLA/act/test_1_adamw_140000steps_10bs"
+# pre_trained_path = "/home/uon/ochansol/lerobot/chansol/model_train/weights/isaac_omy_put_apple_act_adamw_090000steps_16bs"
+dataset_root_path = "/nas/Dataset/VLA/UON/Isaacsim_OMY_apple_picking_auto_shift4"
 
-dataset_root_path = "/nas/Dataset/VLA/UON/Isaacsim_OMY_apple_picking"
+# dataset_root_path = "/nas/Dataset/VLA/UON/Isaacsim_OMY_apple_picking"
 # dataset_root_path = "/nas/Dataset/VLA/UON/omy_f3m_demo_apple_pepper_1+2"
 dataset_id = "user1/repo1"
 
@@ -38,18 +40,18 @@ dataset_metadata = LeRobotDatasetMetadata(
 preprocess, postprocess = make_pre_post_processors(model.config, dataset_stats=dataset_metadata.stats)
 
 
-def infer_fn(images, obs, action_type) -> Dict[str, Any]:
+def infer_fn(images, obss, action_type) -> Dict[str, Any]:
 
     obs = {
         'cam_top': images['full'],
         'cam_wrist': images['wrist'],
-        "joint1":obs["joint_state"][0],
-        "joint2":obs["joint_state"][1],
-        "joint3":obs["joint_state"][2],
-        "joint4":obs["joint_state"][3],
-        "joint5":obs["joint_state"][4],
-        "joint6":obs["joint_state"][5],
-        "rh_r1_joint":obs["joint_state"][6],
+        "joint1":obss["joint_state"][0],
+        "joint2":obss["joint_state"][1],
+        "joint3":obss["joint_state"][2],
+        "joint4":obss["joint_state"][3],
+        "joint5":obss["joint_state"][4],
+        "joint6":obss["joint_state"][5],
+        "rh_r1_joint":obss["joint_state"][6],
 
     }
     print(obs["joint1"], obs["joint2"], obs["joint3"], obs["joint4"], obs["joint5"], obs["joint6"], obs["rh_r1_joint"])
@@ -63,6 +65,7 @@ def infer_fn(images, obs, action_type) -> Dict[str, Any]:
 
     action = make_robot_action(action, dataset_metadata.features)
     action = np.array([i for i in action.values()])
+
     return action
 
 

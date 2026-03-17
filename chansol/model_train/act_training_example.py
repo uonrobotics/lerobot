@@ -13,8 +13,8 @@ from lerobot.policies.factory import make_pre_post_processors
 from tqdm import tqdm
 import wandb
 wandb.init(
-    project="isaac_omy_put_apple_act",   # 프로젝트 이름
-    name="test_1",                   # 실험 이름 (선택)
+    project="Isaacsim_OMY_apple_picking_auto",   # 프로젝트 이름
+    name="shift4",                   # 실험 이름 (선택)
     resume="allow",                   # 이전 실험이 있으면 이어서 진행
     config={
         "lr": 1e-5,
@@ -32,7 +32,7 @@ def make_delta_timestamps(delta_indices: list[int] | None, fps: int) -> list[flo
 
 
 def main():
-    output_directory = Path("/nas/AI_Checkpoints/VLA/act/isaac_omy_put_apple_auto_shift4")
+    output_directory = Path(f"/nas/AI_Checkpoints/VLA/act/{wandb.run.project}/{wandb.run.name}")
 
     dataset_id = "user1/repo1"
     dataset_root_path = "/nas/Dataset/VLA/UON/Isaacsim_OMY_apple_picking_auto_shift4" #"/nas/Dataset/VLA/UON/Isaacsim_OMY_apple_picking_auto" --- IGNORE ---
