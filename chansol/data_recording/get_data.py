@@ -13,7 +13,7 @@ class DataAggregator():
         self.top_dir_path = "cam_top"
         
         self.step_idx = 0
-        self.episode_exist_num = len([i for i in os.listdir(os.path.join(self.data_root_path, self.rgb_dir_path)) if os.path.isdir(os.path.join(self.data_root_path, self.rgb_dir_path, i))])
+        self.episode_exist_list= [i for i in os.listdir(os.path.join(self.data_root_path, self.rgb_dir_path)) if os.path.isdir(os.path.join(self.data_root_path, self.rgb_dir_path, i))]
 
 
     def setup(self, episode_num):

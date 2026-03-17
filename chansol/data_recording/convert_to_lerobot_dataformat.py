@@ -47,7 +47,8 @@ def main():
     )
     print(f'[Info ] 새 데이터셋 생성됨: {save_path}')
 
-    for ep_num in range(data.episode_exist_num):
+    for ep_num in data.episode_exist_list:
+        ep_num = int(ep_num)
         # print(f'[Info ] 에피소드 {ep_num} 녹화 시작...')
         
         # ep_num = 16
