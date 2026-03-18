@@ -1,0 +1,7 @@
+python convert_to_lerobot_dataformat.py \
+--data_root="/nas/Dataset/VLA/UON/Isaacsim_OMY_apple_picking_auto_fixed_box" \
+--end_num=2000
+
+
+
+

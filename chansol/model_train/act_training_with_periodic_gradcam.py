@@ -45,7 +45,7 @@ wandb.init(
 # ============================================================
 
 DATASET_ID = "user1/repo1"
-DATASET_ROOT_PATH = "/nas/Dataset/VLA/UON/Isaacsim_OMY_apple_picking_auto_shift4_filtered"
+DATASET_ROOT_PATH = wandb.config.dataset_path
 PRE_CHECKPOINT_PATH = ""
 OUTPUT_ROOT = Path("/nas/AI_Checkpoints/VLA/act")
 OPTIM_NAME = "adamw"
@@ -55,7 +55,7 @@ LOG_FREQ = 20
 SAVE_STEP = 10000
 
 # Grad-CAM save settings
-GRADCAM_EVERY_STEPS = 10000
+GRADCAM_EVERY_STEPS = 20
 GRADCAM_OUTPUT_DIRNAME = "gradcam_snapshots"
 GRADCAM_ACTION_TIMESTEP = None
 GRADCAM_ACTION_DIM = None
