@@ -86,6 +86,7 @@ dependencies = [
     "matplotlib>=3.10.8",
     "scikit-learn>=1.7.2",
     "umap-learn>=0.5.11",
+    "jupyter>=1.1.1",
 ]
 
 # Optional dependencies

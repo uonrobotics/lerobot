@@ -7,6 +7,7 @@ import torch
 from lerobot.configs.types import FeatureType
 from lerobot.datasets.lerobot_dataset import LeRobotDataset, LeRobotDatasetMetadata
 from lerobot.datasets.utils import dataset_to_policy_features
+from lerobot.optim.schedulers import CosineDecayWithWarmupSchedulerConfig
 from lerobot.policies.act.configuration_act import ACTConfig
 from lerobot.policies.act.modeling_act import ACTPolicy
 from lerobot.policies.factory import make_pre_post_processors
@@ -14,14 +15,14 @@ from tqdm import tqdm
 import wandb
 wandb.init(
     project="Isaacsim_OMY_apple_picking_auto",   # 프로젝트 이름
-    name="shift4",                   # 실험 이름 (선택)
+    name="shift4_filtered",                   # 실험 이름 (선택)
     resume="allow",                   # 이전 실험이 있으면 이어서 진행
     config={
         "lr": 1e-5,
-        "batch_size": 10,
+        "batch_size": 16,
         "model": "act",
-        "dataset_path": "/nas/Dataset/VLA/UON/Isaacsim_OMY_apple_picking_auto_shift4",
-        "training_steps": int(1.5e5),
+        "dataset_path": "/nas/Dataset/VLA/UON/Isaacsim_OMY_apple_picking_auto_shift4_filtered",
+        "training_steps": int(100e4),
     }
 )
 def make_delta_timestamps(delta_indices: list[int] | None, fps: int) -> list[float]:
@@ -35,9 +36,10 @@ def main():
     output_directory = Path(f"/nas/AI_Checkpoints/VLA/act/{wandb.run.project}/{wandb.run.name}")
 
     dataset_id = "user1/repo1"
-    dataset_root_path = "/nas/Dataset/VLA/UON/Isaacsim_OMY_apple_picking_auto_shift4" #"/nas/Dataset/VLA/UON/Isaacsim_OMY_apple_picking_auto" --- IGNORE ---
+    dataset_root_path = "/nas/Dataset/VLA/UON/Isaacsim_OMY_apple_picking_auto_shift4_filtered" #"/nas/Dataset/VLA/UON/Isaacsim_OMY_apple_picking_auto" --- IGNORE ---
     pre_checkpoint_path = ""#"/home/uon/ochansol/lerobot/chansol/model_train/weights/isaac_omy_put_food_act"
     optim_name = "adamw" ## "adamw" or "sgd"
+    scheduler_name = "cosine_decay_with_warmup"
     batch_size = wandb.config.batch_size
     training_steps = wandb.config.training_steps
     log_freq = 20
@@ -58,7 +60,11 @@ def main():
     output_features = {key: ft for key, ft in features.items() if ft.type is FeatureType.ACTION}
     input_features = {key: ft for key, ft in features.items() if key not in output_features}
 
-    cfg = ACTConfig(input_features=input_features, output_features=output_features)
+    cfg = ACTConfig(
+        input_features=input_features,
+        output_features=output_features,
+        optimizer_lr=wandb.config.lr,
+    )
     if pre_checkpoint_path != "":
         policy = ACTPolicy(cfg).from_pretrained(pretrained_name_or_path=pre_checkpoint_path)
     else:
@@ -95,6 +101,16 @@ def main():
                               momentum=0.9, 
                               weight_decay=cfg.optimizer_weight_decay).build(policy.parameters())
 
+    scheduler = None
+    if scheduler_name == "cosine_decay_with_warmup":
+        scheduler_cfg = CosineDecayWithWarmupSchedulerConfig(
+            num_warmup_steps=min(1000, max(1, training_steps // 100)),
+            num_decay_steps=training_steps,
+            peak_lr=cfg.optimizer_lr,
+            decay_lr=cfg.optimizer_lr * 0.1,
+        )
+        scheduler = scheduler_cfg.build(optimizer, training_steps)
+
     dataloader = torch.utils.data.DataLoader(
         dataset,
         batch_size=batch_size,
@@ -126,17 +142,21 @@ def main():
             loss, _ = policy.forward(batch)
             loss.backward()
             optimizer.step()
+            if scheduler is not None:
+                scheduler.step()
             optimizer.zero_grad()
+            current_lr = optimizer.param_groups[0]["lr"]
             pbar.set_postfix(
                 loss=f"{loss.item():.3f}",
                 step=step,
-                lr = optimizer.param_groups[0]["lr"],
+                lr=current_lr,
             )
 
             if step % log_freq == 0:
                 wandb.log({
                     "train/loss": loss.item(),
                     "train/step": step,
+                    "train/lr": current_lr,
                 })
             if step % save_step == 0 and step != 0:
                 output_path = Path(f"{output_directory}_{optim_name}_{step:06d}steps_{batch_size}bs")

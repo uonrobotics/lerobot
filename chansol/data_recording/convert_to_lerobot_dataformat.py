@@ -18,8 +18,8 @@ TASK_DESCRIPTION = "put the apple in the box"     # Task Instruction
 
 
 data = DataAggregator(cfg.DEFAULT_SAVE_ROOT_PATH)
-save_path = f"{cfg.DEFAULT_SAVE_ROOT_PATH}_shift2_filtered"#cfg.DEFAULT_SAVE_ROOT_PATH
-
+save_path = f"{cfg.DEFAULT_SAVE_ROOT_PATH}"#cfg.DEFAULT_SAVE_ROOT_PATH
+shift = 4
 def main():
     # ------------------------------
     # Rerun 초기화
@@ -61,7 +61,7 @@ def main():
 
             # 관절 변환
             follower_numpy, time_stamp = data.get_follower_action(dtype=np.float32)
-            leader_numpy = data.get_leader_action(shift=2, dtype=np.float32)
+            leader_numpy = data.get_leader_action(shift=shift, dtype=np.float32)
             data.step_idx += 1
 
 

@@ -1,0 +1,4 @@
+uv run python /home/uon/ochansol/lerobot/chansol/data_editor/delete_episodes.py \
+  --dataset-root /nas/Dataset/VLA/UON/Isaacsim_OMY_apple_picking_auto_shift4_filtered \
+  --episodes 40 73 79 85 163 265 277 325 358 376 388 391 444 475 496 505 519 539 540 553 628 658 709 794 819 926 982 1073 1181 1210 1218 1255 1276 1377 1564 1616 1840 1855 1903 1905 1942  \
+  --force
