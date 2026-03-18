@@ -1,5 +1,5 @@
 from pathlib import Path
-DEFAULT_SAVE_ROOT_PATH = Path("/nas/Dataset/VLA/UON/Isaacsim_OMY_apple_picking_auto_fixed_box")
+TASK_DESCRIPTION = "put the apple in the box"    
 FPS = 25                                           
 HF_REPO_ID = "user1/repo1"                     
 FEATURES = {

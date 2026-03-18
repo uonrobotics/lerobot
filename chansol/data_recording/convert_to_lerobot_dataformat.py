@@ -1,3 +1,4 @@
+import argparse
 import time
 import numpy as np
 
@@ -7,19 +8,31 @@ from rerun_visualizer import init_rerun, log_rerun_visualization
 import Robotis_OMY_isaac_configs as cfg
 from get_data import DataAggregator
 from tqdm import tqdm
+from pathlib import Path
 
-
+parser = argparse.ArgumentParser(description="Convert raw data to LeRobot dataset format")
+parser.add_argument("--data_root", type=str, help="Root directory of the raw data")
+parser.add_argument("--save_path", type=str, default="",   help="Path to save the converted dataset")
+parser.add_argument("--shift", type=int, default=4, help="Time step shift for leader action")
+parser.add_argument("--start_num", type=int, default=0, help="Starting episode number")
+parser.add_argument("--end_num", type=int, default=-1, help="Ending episode number")
+args = parser.parse_args()
 # ==============================
 # 전역 변수
 # ==============================
 
-TASK_DESCRIPTION = "put the apple in the box"     # Task Instruction
 
+if args.save_path == "":
+    save_path = f"{args.data_root}"
+else :
+    save_path = f"{args.save_path}"
+# DEFAULT_SAVE_ROOT_PATH = Path("/nas/Dataset/VLA/UON/Isaacsim_OMY_apple_picking_auto_fixed_box")
 
+data = DataAggregator(args.data_root)
 
-data = DataAggregator(cfg.DEFAULT_SAVE_ROOT_PATH)
-save_path = f"{cfg.DEFAULT_SAVE_ROOT_PATH}"#cfg.DEFAULT_SAVE_ROOT_PATH
-shift = 4
+shift = args.shift
+start_num = args.start_num
+end_num = args.end_num if args.end_num >= 0 else len(data.episode_exist_list)
 def main():
     # ------------------------------
     # Rerun 초기화
@@ -47,7 +60,7 @@ def main():
     )
     print(f'[Info ] 새 데이터셋 생성됨: {save_path}')
 
-    for ep_num in data.episode_exist_list:
+    for ep_num in data.episode_exist_list[start_num:end_num]:
         ep_num = int(ep_num)
         # print(f'[Info ] 에피소드 {ep_num} 녹화 시작...')
         
@@ -71,7 +84,7 @@ def main():
                 'observation.images.cam_wrist': img_wrist,
                 'observation.state': follower_numpy,
                 'action': leader_numpy,
-                'task': TASK_DESCRIPTION,
+                'task': cfg.TASK_DESCRIPTION,
                 'timestamp': time_stamp,
             }
             dataset.add_frame(frame_data)
