@@ -63,10 +63,20 @@ GRADCAM_ACTION_DIM = None
 # Pick exactly the samples you want to visualize.
 # One image will be saved per tuple, so 4 tuples means 4 images every trigger step.
 GRADCAM_TARGETS: list[tuple[int, int]] = [
-    (0, 0),
-    (1, 0),
-    (2, 0),
-    (3, 0),
+    (0, 40),
+    (1, 55),
+    (2, 44),
+    (3, 34),
+
+    (0, 107),
+    (1, 113),
+    (2, 86),
+    (3, 77),
+
+    (0, 144),
+    (1, 147),
+    (2, 120),
+    (3, 145),
 ]
 
 
