@@ -1,0 +1,17 @@
+d405_node:
+  ros__parameters:
+    serial_no: "335122270404"
+    width: 848
+    height: 480
+    fps: 30
+    enable_depth: false
+    color_topic: "/camera/cam_wrist/realsensc/color/compressed"
+    depth_topic: "/camera/cam_wrist/realsensc/depth/compressed"
+
+    # 자동 노출 끄기 (false면 수동 설정 적용)
+    auto_exposure: true
+    exposure_value: 5000  # 수동 노출값 (3000~10000 권장)
+
+    # 자동 화이트 밸런스 끄기
+    auto_white_balance: true
+    white_balance_value: 6000  # 수동 화이트 밸런스 (2800~6500)

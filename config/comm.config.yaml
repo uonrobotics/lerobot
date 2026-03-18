@@ -1,0 +1,32 @@
+subscribers:
+  # 손목 카메라
+  cam_wrist:
+    topic: "/camera/cam_wrist/realsensc/color/compressed"
+    msg_type: "CompressedImage"
+
+  # 팔로워
+  follower:
+    topic: "/robot/dsr/jointStates"
+    msg_type: "JointState"
+
+  # 리더암
+  leader:
+    topic: "/leader/joint_trajectory"
+    msg_type: "JointTrajectory"
+
+  tcp_tf:
+    topic: "/robot/dsr/tcp_tf"
+    msg_type: "Float64MultiArray"
+
+  gripper:
+    topic: "/robot/dsr/gripper_val"
+    msg_type: "Float32"
+
+
+#publishers:
+#  dual_right_joint:
+#    topic: "/right_robot/leader/joint_trajectory"
+#    msg_type: "JointTrajectory"
+#  dual_left_joint:
+#    topic: "/left_robot/leader/joint_trajectory"
+#    msg_type: "JointTrajectory"

@@ -1,0 +1,217 @@
+<?xml version="1.0"?>
+<robot name="hcr-14">
+
+  <!-- Links -->
+  <link name="world">
+  </link>
+
+  <link name="base">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="[REPLACE_ROOT_URL]/meshes/hcr14/visual/base_link.obj"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="[REPLACE_ROOT_URL]/meshes/hcr14/collision/base_link.STL"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <link name="link1">
+    <inertial>
+      <origin xyz="0.00078 -0.00943 0.16173" rpy="0 0 0"/>
+      <mass value="8.99"/>
+      <inertia ixx="0.034493" ixy="0.000038" ixz="0.000402" iyy="0.03153" iyz="-0.002994" izz="0.026744"/>
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="[REPLACE_ROOT_URL]/meshes/hcr14/visual/link_1.obj"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="[REPLACE_ROOT_URL]/meshes/hcr14/collision/link_1.STL"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <link name="link2">
+    <inertial>
+      <origin xyz="-0.27848 -0.00033 0.17601" rpy="0 0 0"/>
+      <mass value="18.19"/>
+      <inertia ixx="0.062694" ixy="-0.002359" ixz="-0.01741" iyy="1.8038" iyz="-0.000261" izz="1.7838"/>
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="[REPLACE_ROOT_URL]/meshes/hcr14/visual/link_2.obj"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="[REPLACE_ROOT_URL]/meshes/hcr14/collision/link_2.STL"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <link name="link3">
+    <inertial>
+      <origin xyz="-0.35262 0 0.05312" rpy="0 0 0"/>
+      <mass value="5.2"/>
+      <inertia ixx="0.009774" ixy="-0.000004" ixz="-0.006281" iyy="0.22494" iyz="0" izz="0.22184"/>
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="[REPLACE_ROOT_URL]/meshes/hcr14/visual/link_3.obj"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="[REPLACE_ROOT_URL]/meshes/hcr14/collision/link_3.STL"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <link name="link4">
+    <inertial>
+      <origin xyz="0.00003 -0.03238 0.17862" rpy="0 0 0"/>
+      <mass value="2.43"/>
+      <inertia ixx="0.004321" ixy="-0.000002" ixz="0.000005" iyy="0.002339" iyz="-0.000388" izz="0.003884"/>
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="[REPLACE_ROOT_URL]/meshes/hcr14/visual/link_4.obj"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="[REPLACE_ROOT_URL]/meshes/hcr14/collision/link_4.STL"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <link name="link5">
+    <inertial>
+      <origin xyz="0.00003 0.03238 0.14512" rpy="0 0 0"/>
+      <mass value="2.43"/>
+      <inertia ixx="0.004439" ixy="-0.000003" ixz="-0.000004" iyy="0.002452" iyz="0.000451" izz="0.003931"/>
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="[REPLACE_ROOT_URL]/meshes/hcr14/visual/link_5.obj"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="[REPLACE_ROOT_URL]/meshes/hcr14/collision/link_5.STL"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <link name="link6">
+    <inertial>
+      <origin xyz="-0.00012 0.00081 0.11249" rpy="0 0 0"/>
+      <mass value="0.48"/>
+      <inertia ixx="0.00044" ixy="-0.000001" ixz="0" iyy="0.000471" iyz="0.000006" izz="0.000627"/>
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="[REPLACE_ROOT_URL]/meshes/hcr14/visual/link_6.obj"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="[REPLACE_ROOT_URL]/meshes/hcr14/collision/link_6.STL"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <link name="flange">
+  </link>
+
+  <!-- Joints -->
+  <joint name="base" type="fixed">
+    <parent link="world"/>
+    <child link="base"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <axis xyz="0 0 1"/>
+    <dynamics damping="0" friction="0"/>
+  </joint>
+
+  <joint name="joint1" type="revolute">
+    <parent link="base"/>
+    <child link="link1"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <axis xyz="0 0 1"/>
+    <limit lower="-6.2832" upper="6.2832" effort="9999" velocity="2.7052"/>
+    <dynamics damping="0" friction="0"/>
+  </joint>
+
+  <joint name="joint2" type="revolute">
+    <parent link="link1"/>
+    <child link="link2"/>
+    <origin xyz="0 0 0.207" rpy="1.5708 0 0"/>
+    <axis xyz="0 0 1"/>
+    <limit lower="-6.2832" upper="6.2832" effort="9999" velocity="2.7052"/>
+    <dynamics damping="0" friction="0"/>
+  </joint>
+
+  <joint name="joint3" type="revolute">
+    <parent link="link2"/>
+    <child link="link3"/>
+    <origin xyz="-0.73 0 0" rpy="0 0 0"/>
+    <axis xyz="0 0 1"/>
+    <limit lower="-2.8798" upper="2.8798" effort="9999" velocity="4.0143"/>
+    <dynamics damping="0" friction="0"/>
+  </joint>
+
+  <joint name="joint4" type="revolute">
+    <parent link="link3"/>
+    <child link="link4"/>
+    <origin xyz="-0.5388 0 0" rpy="0 0 0"/>
+    <axis xyz="0 0 1"/>
+    <limit lower="-6.2832" upper="6.2832" effort="9999" velocity="4.7124"/>
+    <dynamics damping="0" friction="0"/>
+  </joint>
+
+  <joint name="joint5" type="revolute">
+    <parent link="link4"/>
+    <child link="link5"/>
+    <origin xyz="0 0 0.1847" rpy="1.5708 0 0"/>
+    <axis xyz="0 0 1"/>
+    <limit lower="-6.2832" upper="6.2832" effort="9999" velocity="4.7124"/>
+    <dynamics damping="0" friction="0"/>
+  </joint>
+
+  <joint name="joint6" type="revolute">
+    <parent link="link5"/>
+    <child link="link6"/>
+    <origin xyz="0 0 0.1512" rpy="-1.5708 0 0"/>
+    <axis xyz="0 0 1"/>
+    <limit lower="-6.2832" upper="6.2832" effort="9999" velocity="4.7124"/>
+    <dynamics damping="0" friction="0"/>
+  </joint>
+
+  <joint name="flange" type="fixed">
+    <parent link="link6"/>
+    <child link="flange"/>
+    <origin xyz="0 0 0.1325" rpy="0 0 0"/>
+    <axis xyz="0 0 1"/>
+    <dynamics damping="0" friction="0"/>
+  </joint>
+
+</robot>
