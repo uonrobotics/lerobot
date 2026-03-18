@@ -14,7 +14,8 @@
 
 #### chansol
 chansol/model_train/weights/*
-chansol/model_train/grad_cam_out/
+grad_cam_out/
+
 
 
 ### Environments & Dependencies ###
