@@ -26,14 +26,28 @@ from tqdm import tqdm
 # User Settings
 # ============================================================
 
-CHECKPOINT_PATH = Path("/nas/Dataset/dualarm_ckpts/0316_act_dual_remove_b8/240000/pretrained_model")
-DATASET_ROOT = Path("/nas/Dataset/dualarm_data/0313_each_arm/20260316_dualarm_remove_total")
+# CHECKPOINT_PATH = Path("/nas/Dataset/dualarm_ckpts/0316_act_dual_remove_b16/300000/pretrained_model")
+# DATASET_ROOT = Path("/nas/Dataset/dualarm_data/0313_each_arm/20260316_dualarm_remove_total")
+
+# CHECKPOINT_PATH = Path("/nas/AI_Checkpoints/VLA/act/isaac_omy_put_apple_act_adamw_090000steps_16bs")
+# DATASET_ROOT = Path("/nas/Dataset/VLA/UON/Isaacsim_OMY_apple_picking")
+
+# CHECKPOINT_PATH = Path("/nas/Dataset/Dataset_dualarm_ckpts/0313_act_dual_barcode_b16/300000/pretrained_model")
+# DATASET_ROOT = Path("/nas/Dataset/dualarm_data/0313_each_arm/20260313_dualarm_barcode")
+
+# CHECKPOINT_PATH = Path("/nas/Dataset/Dataset_dualarm_ckpts/0313_act_dual_barcode_b16/300000/pretrained_model")
+# DATASET_ROOT = Path("/nas/Dataset/dualarm_data/0313_each_arm/20260313_dualarm_barcode")
+
+CHECKPOINT_PATH = Path("/nas/Dataset/Dataset_dualarm_ckpts/0313_act_dual_pick_b16/300000/pretrained_model")
+DATASET_ROOT = Path("/nas/Dataset/dualarm_data/0313_each_arm/20260313_dualarm_pick")
+file_name = str(CHECKPOINT_PATH).split("/")[-3]
+
 REPO_ID = "user1/repo1"
-OUTPUT_DIR = Path("/home/uon/ochansol/lerobot/chansol/model_train/grad_cam_out")
+OUTPUT_DIR = Path(f"/home/uon/ochansol/lerobot/chansol/model_train/grad_cam_out/{DATASET_ROOT.name}")
 DEVICE = torch.device("cuda")
 
 # Episode selection
-EPISODE_INDEX = 71
+EPISODE_INDEX = 20
 
 # GIF settings
 FRAME_STRIDE = 1
@@ -43,7 +57,7 @@ DOWNSCALE = 0.9
 CAM_NUM = None  # None이면 dataset/policy에 있는 모든 카메라 사용
 
 # Grad-CAM target settings
-ACTION_TIMESTEP = None  # None이면 chunk 전체 action을 종합해서 시각화
+ACTION_TIMESTEP = 0  # None이면 chunk 전체 action을 종합해서 시각화
 ACTION_DIM = None  # None이면 선택된 timestep 또는 chunk 전체의 action vector 절대값 합 기준
 
 
@@ -233,7 +247,7 @@ def main() -> None:
     if not gif_frames:
         raise RuntimeError("No frames were generated for the GIF.")
 
-    output_path = OUTPUT_DIR / f"episode_{EPISODE_INDEX:04d}_action_gradcam.gif"
+    output_path = OUTPUT_DIR / f"{file_name}_eps_{EPISODE_INDEX:04d}.gif"
     duration_ms = int(1000 / max(1, GIF_FPS))
     gif_frames[0].save(
         output_path,
