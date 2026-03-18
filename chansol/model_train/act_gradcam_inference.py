@@ -38,8 +38,15 @@ from tqdm import tqdm
 # CHECKPOINT_PATH = Path("/nas/Dataset/Dataset_dualarm_ckpts/0313_act_dual_barcode_b16/300000/pretrained_model")
 # DATASET_ROOT = Path("/nas/Dataset/dualarm_data/0313_each_arm/20260313_dualarm_barcode")
 
-CHECKPOINT_PATH = Path("/nas/Dataset/Dataset_dualarm_ckpts/0313_act_dual_pick_b16/300000/pretrained_model")
-DATASET_ROOT = Path("/nas/Dataset/dualarm_data/0313_each_arm/20260313_dualarm_pick")
+# CHECKPOINT_PATH = Path("/nas/Dataset/Dataset_dualarm_ckpts/0313_act_dual_pick_b8/300000/pretrained_model")
+# CHECKPOINT_PATH = Path("/nas/Dataset/dualarm_ckpts/0316_dual_pick_add_no_obj/300000/pretrained_model")
+# DATASET_ROOT = Path("/nas/Dataset/dualarm_data/0313_each_arm/260316_dual_pick_add_no_obj")
+
+CHECKPOINT_PATH = Path("/nas/Dataset/dualarm_ckpts/0316_act_one_pick_b8/210000/pretrained_model")
+DATASET_ROOT = Path("/nas/Dataset/dualarm_data/0313_each_arm/20260316_onearm_pick")
+
+
+
 file_name = str(CHECKPOINT_PATH).split("/")[-3]
 
 REPO_ID = "user1/repo1"
@@ -47,7 +54,7 @@ OUTPUT_DIR = Path(f"/home/uon/ochansol/lerobot/chansol/model_train/grad_cam_out/
 DEVICE = torch.device("cuda")
 
 # Episode selection
-EPISODE_INDEX = 20
+EPISODE_INDEX = 0
 
 # GIF settings
 FRAME_STRIDE = 1
