@@ -28,3 +28,18 @@ python3 scripts/d405_viewer.py
 ## lerobot 설치후 'brotli' 모듈 충돌 문제 발생시
 pip uninstall -y brotli brotlicpy huggingface_hub datasets
 pip install --upgrade brotli huggingface_hub datasets
+
+
+
+## lerobot 학습 명령어
+
+
+```shell
+lerobot-train \
+  --policy.type=act \
+  --dataset.repo_id=/nas/MIN_JU_SIK/dataset/user1/dsr1 \
+  --output_dir=/nas/MIN_JU_SIK/dataset/user1/dsr1_train \
+  --steps=300000 \
+  --batch_size=64 \
+  --policy.push_to_hub false
+```
