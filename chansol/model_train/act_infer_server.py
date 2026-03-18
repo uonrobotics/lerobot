@@ -8,9 +8,6 @@ from lerobot.policies.utils import build_inference_frame, make_robot_action
 from lerobot.robots.so100_follower.config_so100_follower import SO100FollowerConfig
 from lerobot.robots.so100_follower.so100_follower import SO100Follower
 
-MAX_EPISODES = 5
-MAX_STEPS_PER_EPISODE = 20
-
 import sys
 sys.path.append("/home/uon/ochansol/isaac_code/isaac_chansol")
 from socket_utils.vla_socket import vla_server
@@ -21,12 +18,18 @@ import numpy as np
 
 # pre_trained_path = "/home/uon/ochansol/lerobot/chansol/model_train/weights/isaac_omy_put_food_act_adamw_090000steps_16bs"
 # pre_trained_path = "/nas/AI_Checkpoints/VLA/act/act_demo_apple_pepper_1+2_batch16/checkpoints/last/pretrained_model"
-pre_trained_path = "/nas/AI_Checkpoints/VLA/act/test_1_adamw_140000steps_10bs"
 # pre_trained_path = "/home/uon/ochansol/lerobot/chansol/model_train/weights/isaac_omy_put_apple_act_adamw_090000steps_16bs"
-dataset_root_path = "/nas/Dataset/VLA/UON/Isaacsim_OMY_apple_picking_auto_shift4"
 
 # dataset_root_path = "/nas/Dataset/VLA/UON/Isaacsim_OMY_apple_picking"
 # dataset_root_path = "/nas/Dataset/VLA/UON/omy_f3m_demo_apple_pepper_1+2"
+
+# pre_trained_path = "/nas/AI_Checkpoints/VLA/act/test_1_adamw_140000steps_10bs"
+# dataset_root_path = "/nas/Dataset/VLA/UON/Isaacsim_OMY_apple_picking_auto_shift4"
+
+pre_trained_path = "/nas/AI_Checkpoints/VLA/act/Isaacsim_OMY_apple_picking_auto/shift4_filtered_gradcam/adamw_050000steps_16bs"
+dataset_root_path = "/nas/Dataset/VLA/UON/Isaacsim_OMY_apple_picking_auto_shift4_filtered"
+
+
 dataset_id = "user1/repo1"
 
 

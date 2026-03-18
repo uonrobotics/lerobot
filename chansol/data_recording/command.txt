@@ -5,3 +5,19 @@ python convert_to_lerobot_dataformat.py \
 
 
 
+uv run python /home/uon/ochansol/lerobot/chansol/data_recording/convert_to_lerobot_shard.py \
+  --data_root /nas/Dataset/VLA/UON/Isaacsim_OMY_apple_picking_auto \
+  --save_path /nas/Dataset/VLA/UON/shards/Isaacsim_OMY_apple_picking_auto_shift1_filtered/shard_00 \
+  --shift 1 \
+  --start_num 0 \
+  --end_num 200
+
+
+
+uv run python /home/uon/ochansol/lerobot/chansol/data_recording/merge_lerobot_shards.py \
+  --shard-roots \
+    /nas/Dataset/VLA/UON/shards/Isaacsim_OMY_apple_picking_auto_shift1_filtered/shard_00 \
+    /nas/Dataset/VLA/UON/shards/Isaacsim_OMY_apple_picking_auto_shift1_filtered/shard_01 \
+    /nas/Dataset/VLA/UON/shards/Isaacsim_OMY_apple_picking_auto_shift1_filtered/shard_02\
+  --output-root /nas/Dataset/VLA/UON/Isaacsim_OMY_apple_picking_auto_shift1_filtered_merged \
+  --output-repo-id user1/repo1
