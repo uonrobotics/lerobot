@@ -157,8 +157,7 @@ def save_periodic_gradcams(
 
     joint_names = list(dataset_metadata.features["observation.state"]["names"])
     image_feature_keys = list(policy.config.image_features)
-    wandb_images: dict[str, wandb.Image] = {}
-    wandb_image_list: list[wandb.Image] = []
+    wandb_episode_images: dict[str, list[wandb.Image]] = {}
 
     for episode_index, frame_index in GRADCAM_TARGETS:
         key = (episode_index, frame_index)
@@ -217,8 +216,8 @@ def save_periodic_gradcams(
             fig,
             caption=f"step={step}, episode={episode_index}, frame={frame_index}",
         )
-        wandb_images[wandb_key] = wandb_image
-        wandb_image_list.append(wandb_image)
+        episode_key = f"gradcam/episode_{episode_index:04d}"
+        wandb_episode_images.setdefault(episode_key, []).append(wandb_image)
         plt.close(fig)
 
         del action_results, cnn_results, joint_result, batch, sample
@@ -226,12 +225,11 @@ def save_periodic_gradcams(
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
 
-    if wandb_images:
+    if wandb_episode_images:
         wandb.log(
             {
                 "train/step": step,
-                "gradcam/images": wandb_image_list,
-                **wandb_images,
+                **wandb_episode_images,
             },
             step=step,
         )

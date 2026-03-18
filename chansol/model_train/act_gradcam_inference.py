@@ -33,7 +33,7 @@ OUTPUT_DIR = Path("/home/uon/ochansol/lerobot/chansol/model_train/grad_cam_out")
 DEVICE = torch.device("cuda")
 
 # Episode selection
-EPISODE_INDEX = 70
+EPISODE_INDEX = 71
 
 # GIF settings
 FRAME_STRIDE = 1
