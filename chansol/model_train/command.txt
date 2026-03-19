@@ -1,0 +1,16 @@
+.venv/bin/python /home/uon/ochansol/lerobot/chansol/model_train/act_training_with_periodic_gradcam.py \
+  --dataset-path /nas/Dataset/VLA/UON/Isaacsim_OMY_apple_picking_auto_shift4_filtered \
+  --checkpoint-path /path/to/pretrained_model \
+  --output-root /nas/AI_Checkpoints/VLA/act_custom \
+  --batch-size 16 \
+  --training-steps 1000000
+
+
+.venv/bin/python /home/uon/ochansol/lerobot/chansol/model_train/act_training_with_periodic_gradcam.py \
+  --dataset-path /nas/Dataset/VLA/UON/your_dataset \
+  --checkpoint-path /path/to/pretrained_model \
+  --output-root /nas/AI_Checkpoints/VLA/act_custom \
+  --project Isaacsim_OMY_apple_picking_auto \
+  --run-name shift1_filtered_gradcam_v2 \
+  --batch-size 16 \
+  --training-steps 1000000

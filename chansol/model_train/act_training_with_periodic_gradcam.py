@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import argparse
 from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
+import torchvision.transforms as T
 import wandb
 from tqdm import tqdm
 
@@ -25,40 +27,40 @@ from act_gradcam import (
     compute_joint_observation_saliency,
 )
 
-
-wandb.init(
-    project="Isaacsim_OMY_apple_picking_auto",
-    name="shift4_filtered_gradcam",
-    resume="allow",
-    config={
-        "lr": 1e-5,
-        "batch_size": 16,
-        "model": "act",
-        "dataset_path": "/nas/Dataset/VLA/UON/Isaacsim_OMY_apple_picking_auto_shift4_filtered",
-        "training_steps": int(100e4),
-    },
-)
-
-
 # ============================================================
 # User Settings
 # ============================================================
 
 DATASET_ID = "user1/repo1"
-DATASET_ROOT_PATH = wandb.config.dataset_path
-PRE_CHECKPOINT_PATH = ""
 OUTPUT_ROOT = Path("/nas/AI_Checkpoints/VLA/act")
 OPTIM_NAME = "adamw"
 SCHEDULER_NAME = "cosine_decay_with_warmup"
 DEVICE = torch.device("cuda")
 LOG_FREQ = 20
 SAVE_STEP = 10000
+DEFAULT_LR = 1e-5
+DEFAULT_BATCH_SIZE = 16
+DEFAULT_TRAINING_STEPS = int(100e4)
+DEFAULT_DATASET_PATH = "/nas/Dataset/VLA/UON/Isaacsim_OMY_apple_picking_auto_shift4_filtered"
+DEFAULT_CHECKPOINT_PATH = ""
+DEFAULT_OUTPUT_ROOT = OUTPUT_ROOT
+WANDB_PROJECT = "Isaacsim_OMY_apple_picking_auto"
+WANDB_RUN_NAME = "shift4_filtered_gradcam"
 
 # Grad-CAM save settings
 GRADCAM_EVERY_STEPS = 500
 GRADCAM_OUTPUT_DIRNAME = "gradcam_snapshots"
 GRADCAM_ACTION_TIMESTEP = None
 GRADCAM_ACTION_DIM = None
+
+# Simple torchvision color jitter augmentation for training images.
+COLOR_JITTER_PROB = 0.8
+COLOR_JITTER = T.ColorJitter(
+    brightness=0.2,
+    contrast=0.2,
+    saturation=0.2,
+    hue=0.05,
+)
 
 # Pick exactly the samples you want to visualize.
 # One image will be saved per tuple, so 4 tuples means 4 images every trigger step.
@@ -86,6 +88,18 @@ def make_delta_timestamps(delta_indices: list[int] | None, fps: int) -> list[flo
     return [i / fps for i in delta_indices]
 
 
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--dataset-path", type=str, default=DEFAULT_DATASET_PATH)
+    parser.add_argument("--checkpoint-path", type=str, default=DEFAULT_CHECKPOINT_PATH)
+    parser.add_argument("--output-root", type=str, default=str(DEFAULT_OUTPUT_ROOT))
+    parser.add_argument("--project", type=str, default=WANDB_PROJECT)
+    parser.add_argument("--run-name", type=str, default=WANDB_RUN_NAME)
+    parser.add_argument("--batch-size", type=int, default=DEFAULT_BATCH_SIZE)
+    parser.add_argument("--training-steps", type=int, default=DEFAULT_TRAINING_STEPS)
+    return parser.parse_args()
+
+
 def build_gradcam_sample_lookup(dataset: LeRobotDataset) -> dict[tuple[int, int], int]:
     episode_column = dataset.hf_dataset["episode_index"]
     frame_column = dataset.hf_dataset["frame_index"]
@@ -95,6 +109,13 @@ def build_gradcam_sample_lookup(dataset: LeRobotDataset) -> dict[tuple[int, int]
         frm_val = int(frm_idx.item()) if hasattr(frm_idx, "item") else int(frm_idx)
         lookup[(ep_val, frm_val)] = row_idx
     return lookup
+
+
+def apply_color_jitter_to_batch(batch: dict, image_feature_keys: list[str]) -> dict:
+    for image_key in image_feature_keys:
+        if torch.rand(1).item() < COLOR_JITTER_PROB:
+            batch[image_key] = torch.stack([COLOR_JITTER(image) for image in batch[image_key]], dim=0)
+    return batch
 
 
 def compose_gradcam_snapshot(
@@ -239,7 +260,31 @@ def save_periodic_gradcams(
 
 
 def main():
-    output_directory = OUTPUT_ROOT / wandb.run.project / wandb.run.name
+    args = parse_args()
+    dataset_root_path = args.dataset_path
+    pre_checkpoint_path = args.checkpoint_path
+    output_root = Path(args.output_root)
+    wandb_project = args.project
+    wandb_run_name = args.run_name
+
+    wandb.init(
+        project=wandb_project,
+        name=wandb_run_name,
+        resume="allow",
+        config={
+            "lr": DEFAULT_LR,
+            "batch_size": args.batch_size,
+            "model": "act",
+            "dataset_path": dataset_root_path,
+            "output_root": str(output_root),
+            "training_steps": args.training_steps,
+            "checkpoint_path": pre_checkpoint_path,
+            "project": wandb_project,
+            "run_name": wandb_run_name,
+        },
+    )
+
+    output_directory = output_root / wandb.run.project / wandb.run.name
     output_directory.mkdir(parents=True, exist_ok=True)
     gradcam_output_dir = output_directory / GRADCAM_OUTPUT_DIRNAME
     gradcam_output_dir.mkdir(parents=True, exist_ok=True)
@@ -249,7 +294,7 @@ def main():
 
     dataset_metadata = LeRobotDatasetMetadata(
         repo_id=DATASET_ID,
-        root=DATASET_ROOT_PATH,
+        root=dataset_root_path,
     )
 
     features = dataset_to_policy_features(dataset_metadata.features)
@@ -262,8 +307,8 @@ def main():
         optimizer_lr=wandb.config.lr,
     )
 
-    if PRE_CHECKPOINT_PATH:
-        policy = ACTPolicy(cfg).from_pretrained(pretrained_name_or_path=PRE_CHECKPOINT_PATH)
+    if pre_checkpoint_path:
+        policy = ACTPolicy(cfg).from_pretrained(pretrained_name_or_path=pre_checkpoint_path)
     else:
         policy = ACTPolicy(cfg)
 
@@ -282,7 +327,7 @@ def main():
 
     dataset = LeRobotDataset(
         DATASET_ID,
-        root=DATASET_ROOT_PATH,
+        root=dataset_root_path,
         delta_timestamps=delta_timestamps,
     )
     gradcam_sample_lookup = build_gradcam_sample_lookup(dataset)
@@ -317,12 +362,14 @@ def main():
         pin_memory=DEVICE.type != "cpu",
         drop_last=True,
     )
+    image_feature_keys = list(cfg.image_features)
 
     step = 0
     done = False
     while not done:
         pbar = tqdm(dataloader, desc="Training", unit="batch")
         for batch in pbar:
+            batch = apply_color_jitter_to_batch(batch, image_feature_keys)
             batch = preprocessor(batch)
             loss, _ = policy.forward(batch)
             loss.backward()

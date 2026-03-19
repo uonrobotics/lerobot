@@ -42,8 +42,11 @@ from tqdm import tqdm
 # CHECKPOINT_PATH = Path("/nas/Dataset/dualarm_ckpts/0316_dual_pick_add_no_obj/300000/pretrained_model")
 # DATASET_ROOT = Path("/nas/Dataset/dualarm_data/0313_each_arm/260316_dual_pick_add_no_obj")
 
-CHECKPOINT_PATH = Path("/nas/Dataset/dualarm_ckpts/0316_act_one_pick_b8/210000/pretrained_model")
-DATASET_ROOT = Path("/nas/Dataset/dualarm_data/0313_each_arm/20260316_onearm_pick")
+# CHECKPOINT_PATH = Path("/nas/Dataset/dualarm_ckpts/0316_act_one_pick_b8/210000/pretrained_model")  ######## use_peft 제거 해야됨
+# DATASET_ROOT = Path("/nas/Dataset/dualarm_data/0313_each_arm/20260316_onearm_pick")
+
+CHECKPOINT_PATH = Path("/nas/Dataset/dualarm_ckpts/0318_act_dual_v1/300000/pretrained_model")
+DATASET_ROOT = Path("/nas/Dataset/dualarm_data/0317_dualarm_cashier/20260317_dual_dataset_v1")
 
 
 
@@ -54,7 +57,7 @@ OUTPUT_DIR = Path(f"/home/uon/ochansol/lerobot/chansol/model_train/grad_cam_out/
 DEVICE = torch.device("cuda")
 
 # Episode selection
-EPISODE_INDEX = 0
+EPISODE_INDEX = 30
 
 # GIF settings
 FRAME_STRIDE = 1
