@@ -41,14 +41,13 @@ SAVE_STEP = 10000
 DEFAULT_LR = 1e-5
 DEFAULT_BATCH_SIZE = 16
 DEFAULT_TRAINING_STEPS = int(100e4)
-DEFAULT_DATASET_PATH = "/nas/Dataset/VLA/UON/Isaacsim_OMY_apple_picking_auto_shift4_filtered"
+DEFAULT_DATASET_PATH = "/nas/Dataset/VLA/UON/Isaacsim_OMY_apple_picking_auto_fixed_box"
 DEFAULT_CHECKPOINT_PATH = ""
 DEFAULT_OUTPUT_ROOT = OUTPUT_ROOT
-WANDB_PROJECT = "Isaacsim_OMY_apple_picking_auto"
-WANDB_RUN_NAME = "shift4_filtered_gradcam"
-
+WANDB_PROJECT = "Isaacsim_OMY_apple_picking_auto_fixed_box"
+WANDB_RUN_NAME = "fixed_box_gradcam"
 # Grad-CAM save settings
-GRADCAM_EVERY_STEPS = 500
+GRADCAM_EVERY_STEPS = 1000
 GRADCAM_OUTPUT_DIRNAME = "gradcam_snapshots"
 GRADCAM_ACTION_TIMESTEP = None
 GRADCAM_ACTION_DIM = None
