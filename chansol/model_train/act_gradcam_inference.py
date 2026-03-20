@@ -45,10 +45,11 @@ from tqdm import tqdm
 # CHECKPOINT_PATH = Path("/nas/Dataset/dualarm_ckpts/0316_act_one_pick_b8/210000/pretrained_model")  ######## use_peft 제거 해야됨
 # DATASET_ROOT = Path("/nas/Dataset/dualarm_data/0313_each_arm/20260316_onearm_pick")
 
-CHECKPOINT_PATH = Path("/nas/Dataset/dualarm_ckpts/0318_act_dual_v1/300000/pretrained_model")
-DATASET_ROOT = Path("/nas/Dataset/dualarm_data/0317_dualarm_cashier/20260317_dual_dataset_v1")
+# CHECKPOINT_PATH = Path("/nas/Dataset/dualarm_ckpts/0318_act_dual_v1/300000/pretrained_model")
+# DATASET_ROOT = Path("/nas/Dataset/dualarm_data/0317_dualarm_cashier/20260317_dual_dataset_v1")
 
-
+CHECKPOINT_PATH = Path("/nas/AI_Checkpoints/VLA/act/Isaacsim_OMY_apple_picking_auto_augmented_shift1_merged/shift1_gradcam/adamw_090000steps_16bs")
+DATASET_ROOT = Path("/nas/Dataset/VLA/UON/Isaacsim_OMY_apple_picking_auto_augmented_shift1_merged")
 
 file_name = str(CHECKPOINT_PATH).split("/")[-3]
 
@@ -57,7 +58,7 @@ OUTPUT_DIR = Path(f"/home/uon/ochansol/lerobot/chansol/model_train/grad_cam_out/
 DEVICE = torch.device("cuda")
 
 # Episode selection
-EPISODE_INDEX = 30
+EPISODE_INDEX = 35
 
 # GIF settings
 FRAME_STRIDE = 1

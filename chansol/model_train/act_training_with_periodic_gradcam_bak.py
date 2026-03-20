@@ -44,7 +44,7 @@ DEFAULT_TRAINING_STEPS = int(100e4)
 DEFAULT_DATASET_PATH = "/nas/Dataset/VLA/UON/Isaacsim_OMY_apple_picking_auto_fixed_box"
 DEFAULT_CHECKPOINT_PATH = ""
 DEFAULT_OUTPUT_ROOT = OUTPUT_ROOT
-DEFAULT_USE_SCHEDULER = True
+DEFAULT_FREEZE_CNN_AFTER_STEP = -1
 WANDB_PROJECT = "Isaacsim_OMY_apple_picking_auto_fixed_box"
 WANDB_RUN_NAME = "fixed_box_gradcam"
 # Grad-CAM save settings
@@ -97,7 +97,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--run-name", type=str, default=WANDB_RUN_NAME)
     parser.add_argument("--batch-size", type=int, default=DEFAULT_BATCH_SIZE)
     parser.add_argument("--training-steps", type=int, default=DEFAULT_TRAINING_STEPS)
-    parser.add_argument("--use-scheduler", type=str, default=str(DEFAULT_USE_SCHEDULER))
+    parser.add_argument("--freeze-cnn-after-step", type=int, default=DEFAULT_FREEZE_CNN_AFTER_STEP)
     parser.add_argument("--color-jitter", type=str, default="False", help="Apply random color jitter to input images during training.")
     return parser.parse_args()
 
@@ -118,6 +118,15 @@ def apply_color_jitter_to_batch(batch: dict, image_feature_keys: list[str]) -> d
         if torch.rand(1).item() < COLOR_JITTER_PROB:
             batch[image_key] = torch.stack([COLOR_JITTER(image) for image in batch[image_key]], dim=0)
     return batch
+
+
+def freeze_cnn_backbone(policy: ACTPolicy) -> int:
+    frozen_param_count = 0
+    for name, param in policy.named_parameters():
+        if name.startswith("model.backbone") and param.requires_grad:
+            param.requires_grad = False
+            frozen_param_count += param.numel()
+    return frozen_param_count
 
 
 def compose_gradcam_snapshot(
@@ -268,7 +277,7 @@ def main():
     output_root = Path(args.output_root)
     wandb_project = args.project
     wandb_run_name = args.run_name
-    use_scheduler = False if args.use_scheduler.lower() == "false" else True
+    freeze_cnn_after_step = args.freeze_cnn_after_step
     color_jitter = False if args.color_jitter.lower() == "false" else True
     wandb.init(
         project=wandb_project,
@@ -284,7 +293,7 @@ def main():
             "checkpoint_path": pre_checkpoint_path,
             "project": wandb_project,
             "run_name": wandb_run_name,
-            "use_scheduler": use_scheduler,
+            "freeze_cnn_after_step": freeze_cnn_after_step,
         },
     )
 
@@ -350,7 +359,7 @@ def main():
         raise ValueError(f"Unsupported optimizer: {OPTIM_NAME}")
 
     scheduler = None
-    if use_scheduler and SCHEDULER_NAME == "cosine_decay_with_warmup":
+    if SCHEDULER_NAME == "cosine_decay_with_warmup":
         scheduler_cfg = CosineDecayWithWarmupSchedulerConfig(
             num_warmup_steps=min(1000, max(1, training_steps // 100)),
             num_decay_steps=training_steps,
@@ -367,12 +376,26 @@ def main():
         drop_last=True,
     )
     image_feature_keys = list(cfg.image_features)
+    cnn_is_frozen = False
 
     step = 0
     done = False
     while not done:
         pbar = tqdm(dataloader, desc="Training", unit="batch")
         for batch in pbar:
+            if not cnn_is_frozen and freeze_cnn_after_step >= 0 and step >= freeze_cnn_after_step:
+                frozen_param_count = freeze_cnn_backbone(policy)
+                cnn_is_frozen = True
+                print(f"[train] CNN backbone frozen at step={step} ({frozen_param_count} params)")
+                wandb.log(
+                    {
+                        "train/step": step,
+                        "train/cnn_frozen": 1,
+                        "train/cnn_frozen_param_count": frozen_param_count,
+                    },
+                    step=step,
+                )
+
             if color_jitter:
                 batch = apply_color_jitter_to_batch(batch, image_feature_keys)
             batch = preprocessor(batch)
