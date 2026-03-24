@@ -1,29 +1,22 @@
 
-.venv/bin/python /home/uon/ochansol/lerobot/chansol/model_train/act_training_with_periodic_gradcam.py \
-  --dataset-path /nas/Dataset/VLA/UON/Isaacsim_OMY_apple_picking_auto_fixed_box \
-  --checkpoint-path /path/to/pretrained_model \
-  --output-root /nas/AI_Checkpoints/VLA/act_custom \
-  --project Isaacsim_OMY_apple_picking_auto \
-  --run-name shift1_filtered_gradcam_v2 \
-  --batch-size 16 \
-  --training-steps 1000000
-
-
-
- uv run /home/jinkyo/ochansol/lerobot/chansol/model_train/act_training_with_periodic_gradcam.py \
-  --dataset-path /nas/Dataset/VLA/UON/Isaacsim_OMY_apple_picking_auto_fixed_box \
+uv run /home/uon/ochansol/lerobot/chansol/model_train/act_training_with_periodic_gradcam.py \
+  --dataset-path /nas/Dataset/VLA/UON/Isaacsim_OMY_apple_picking_auto_fixed_place \
+  --checkpoint-path /nas/AI_Checkpoints/VLA/act/Isaacsim/OMY_apple_picking/auto_fixed_place/nojitter_cosine_decay_with_warmup_adamw_16bs_pretrained/070000steps \
   --output-root /nas/AI_Checkpoints/VLA/act \
-  --project Isaacsim_OMY_apple_picking_auto_fixed_box \
-  --run-name shift1_filtered_colorjitter_gradcam \
+  --lr 1e-5 \
   --batch-size 16 \
-  --training-steps 1000000
-  --color-jitter "False"
+  --training-steps 1000000 \
+  --use-scheduler False \
+  --color-jitter False
 
- uv run /home/uon/ochansol/lerobot/chansol/model_train/act_training_with_periodic_gradcam.py \
-  --dataset-path /nas/Dataset/VLA/UON/Isaacsim_OMY_apple_picking_auto_augmented_shift1_merged \
+
+  uv run /home/uon/ochansol/lerobot/chansol/model_train/act_training_with_periodic_gradcam.py \
+  --dataset-path /nas/Dataset/VLA/UON/Isaacsim/OMY_apple_picking/auto_fixed_place_ALL \
   --output-root /nas/AI_Checkpoints/VLA/act \
-  --project Isaacsim_OMY_apple_picking_auto_augmented_shift1_merged \
-  --run-name shift1_gradcam \
+  --lr 1e-5 \
   --batch-size 16 \
-  --training-steps 1000000
-  --color-jitter "False"
+  --training-steps 500000 \
+  --use-scheduler False \
+  --color-jitter False
+
+

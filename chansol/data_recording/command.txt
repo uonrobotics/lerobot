@@ -15,25 +15,19 @@ uv run python /home/uon/ochansol/lerobot/chansol/data_recording/convert_to_lerob
 or 
 
 uv run python /home/uon/ochansol/lerobot/chansol/data_recording/convert_to_lerobot_shard.py \
-  --data_root /nas/Dataset/VLA/UON/Isaacsim_OMY_apple_picking_auto_augmented \
+  --data_root /nas/Dataset/VLA/UON/Isaacsim/OMY_apple_picking/auto_random_place_aug \
   --shift 1 \
-  --episodes_per_shard 200 \
-  --save_path /nas/Dataset/VLA/UON/shards/Isaacsim_OMY_apple_picking_auto_augmented_shift1/shard_00 \
+  --episodes_per_shard 500 \
+  --save_path /nas/Dataset/VLA/UON/shards/Isaacsim/OMY_apple_picking/auto_random_place_aug/shard_00 \
   --shard_index 0
 
 ################3
 
 uv run python /home/uon/ochansol/lerobot/chansol/data_recording/merge_lerobot_shards.py \
   --shard-roots \
-    /nas/Dataset/VLA/UON/shards/Isaacsim_OMY_apple_picking_auto_augmented_shift1/shard_00 \
-    /nas/Dataset/VLA/UON/shards/Isaacsim_OMY_apple_picking_auto_augmented_shift1/shard_01 \
-    /nas/Dataset/VLA/UON/shards/Isaacsim_OMY_apple_picking_auto_augmented_shift1/shard_02 \
-    /nas/Dataset/VLA/UON/shards/Isaacsim_OMY_apple_picking_auto_augmented_shift1/shard_03 \
-    /nas/Dataset/VLA/UON/shards/Isaacsim_OMY_apple_picking_auto_augmented_shift1/shard_04 \
-    /nas/Dataset/VLA/UON/shards/Isaacsim_OMY_apple_picking_auto_augmented_shift1/shard_05 \
-    /nas/Dataset/VLA/UON/shards/Isaacsim_OMY_apple_picking_auto_augmented_shift1/shard_06 \
-    /nas/Dataset/VLA/UON/shards/Isaacsim_OMY_apple_picking_auto_augmented_shift1/shard_07 \
-    /nas/Dataset/VLA/UON/shards/Isaacsim_OMY_apple_picking_auto_augmented_shift1/shard_08 \
-    /nas/Dataset/VLA/UON/shards/Isaacsim_OMY_apple_picking_auto_augmented_shift1/shard_09 \
-  --output-root /nas/Dataset/VLA/UON/Isaacsim_OMY_apple_picking_auto_augmented_shift1_merged \
+    /nas/Dataset/VLA/UON/shards/Isaacsim/OMY_apple_picking/auto_fixed_place_no_aug/shard_00 \
+    /nas/Dataset/VLA/UON/shards/Isaacsim/OMY_apple_picking/auto_fixed_place_no_aug/shard_01 \
+    /nas/Dataset/VLA/UON/shards/Isaacsim/OMY_apple_picking/auto_fixed_place_no_aug/shard_02 \
+    /nas/Dataset/VLA/UON/shards/Isaacsim/OMY_apple_picking/auto_fixed_place_no_aug/shard_03 \
+  --output-root /nas/Dataset/VLA/UON/Isaacsim/OMY_apple_picking/auto_fixed_place_no_aug \
   --output-repo-id user1/repo1

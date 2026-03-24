@@ -62,6 +62,14 @@ class ACTPolicy(PreTrainedPolicy):
 
         self.model = ACT(config)
 
+        self.ensemble_stride = 1
+        self.ensemble_intersection = self.config.chunk_size//self.ensemble_stride
+        self.action_chunk_arr=np.array([])
+        self.ensemble_weights_scale = 1
+        self.ensemble_weights = np.array([np.exp(-self.ensemble_weights_scale*i) for i in range(self.ensemble_intersection)])[None,:]
+
+
+        
         if config.temporal_ensemble_coeff is not None:
             self.temporal_ensembler = ACTTemporalEnsembler(config.temporal_ensemble_coeff, config.chunk_size)
 
@@ -103,21 +111,49 @@ class ACTPolicy(PreTrainedPolicy):
         environment. It works by managing the actions in a queue and only calling `select_actions` when the
         queue is empty.
         """
-        self.eval()  # keeping the policy in eval mode as it could be set to train mode while queue is consumed
 
-        if self.config.temporal_ensemble_coeff is not None:
-            actions = self.predict_action_chunk(batch)
-            action = self.temporal_ensembler.update(actions)
-            return action
+        # self.eval()  # keeping the policy in eval mode as it could be set to train mode while queue is consumed
 
-        # Action queue logic for n_action_steps > 1. When the action_queue is depleted, populate it by
-        # querying the policy.
-        if len(self._action_queue) == 0:
-            actions = self.predict_action_chunk(batch)[:, : self.config.n_action_steps]
+        # if self.config.temporal_ensemble_coeff is not None:
+        #     actions = self.predict_action_chunk(batch)
+        #     action = self.temporal_ensembler.update(actions)
+        #     return action
 
-            # `self.model.forward` returns a (batch_size, n_action_steps, action_dim) tensor, but the queue
-            # effectively has shape (n_action_steps, batch_size, *), hence the transpose.
-            self._action_queue.extend(actions.transpose(0, 1))
+        # # Action queue logic for n_action_steps > 1. When the action_queue is depleted, populate it by
+        # # querying the policy.
+        # if len(self._action_queue) == 0:
+        #     actions = self.predict_action_chunk(batch)[:, : self.config.n_action_steps]
+        #     self._action_queue.extend(actions.transpose(0, 1))
+        # return self._action_queue.popleft()
+
+        #### chansol
+
+        self.eval()
+
+        actions = self.predict_action_chunk(batch)[0].detach().cpu().numpy()
+
+        if len(self.action_chunk_arr) == 0:
+            self.action_chunk_arr = actions[None,:]
+            return torch.tensor(actions[0]).float().cuda()
+
+        elif len(self.action_chunk_arr) < self.config.chunk_size:
+            self.action_chunk_arr = np.concatenate((self.action_chunk_arr, actions[None,:]), axis=0)
+            return torch.tensor(actions[0]).float().cuda()
+        else:
+            self.action_chunk_arr = np.concatenate((self.action_chunk_arr[1:], actions[None,:]), axis=0)
+
+            temporal_ensemble_action = self.ensemble_weights.dot( \
+                self.action_chunk_arr[[i for i in range(0,self.ensemble_intersection*self.ensemble_stride, self.ensemble_stride)],
+                                      [ -i-1 for i in range(0, self.ensemble_intersection*self.ensemble_stride, self.ensemble_stride)]] ) / self.ensemble_weights.sum()
+        
+            return torch.tensor(temporal_ensemble_action).float().cuda()
+        #####
+
+
+
+
+
+
         return self._action_queue.popleft()
 
     @torch.no_grad()

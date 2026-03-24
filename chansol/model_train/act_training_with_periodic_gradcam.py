@@ -45,8 +45,11 @@ DEFAULT_DATASET_PATH = "/nas/Dataset/VLA/UON/Isaacsim_OMY_apple_picking_auto_fix
 DEFAULT_CHECKPOINT_PATH = ""
 DEFAULT_OUTPUT_ROOT = OUTPUT_ROOT
 DEFAULT_USE_SCHEDULER = True
-WANDB_PROJECT = "Isaacsim_OMY_apple_picking_auto_fixed_box"
-WANDB_RUN_NAME = "fixed_box_gradcam"
+DEFAULT_WANDB_PROJECT = ""
+DEFAULT_WANDB_RUN_NAME = ""
+OPTIMIZER_STATE_FILENAME = "optimizer_state.pt"
+SCHEDULER_STATE_FILENAME = "scheduler_state.pt"
+TRAINING_STATE_FILENAME = "training_state.pt"
 # Grad-CAM save settings
 GRADCAM_EVERY_STEPS = 500
 GRADCAM_OUTPUT_DIRNAME = "gradcam_snapshots"
@@ -93,13 +96,117 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--dataset-path", type=str, default=DEFAULT_DATASET_PATH)
     parser.add_argument("--checkpoint-path", type=str, default=DEFAULT_CHECKPOINT_PATH)
     parser.add_argument("--output-root", type=str, default=str(DEFAULT_OUTPUT_ROOT))
-    parser.add_argument("--project", type=str, default=WANDB_PROJECT)
-    parser.add_argument("--run-name", type=str, default=WANDB_RUN_NAME)
+    parser.add_argument("--project", type=str, default=DEFAULT_WANDB_PROJECT)
+    parser.add_argument("--run-name", type=str, default=DEFAULT_WANDB_RUN_NAME)
+    parser.add_argument("--lr", type=float, default=DEFAULT_LR)
     parser.add_argument("--batch-size", type=int, default=DEFAULT_BATCH_SIZE)
     parser.add_argument("--training-steps", type=int, default=DEFAULT_TRAINING_STEPS)
     parser.add_argument("--use-scheduler", type=str, default=str(DEFAULT_USE_SCHEDULER))
     parser.add_argument("--color-jitter", type=str, default="False", help="Apply random color jitter to input images during training.")
     return parser.parse_args()
+
+
+def infer_dataset_identity(dataset_root_path: str) -> tuple[str, str, str]:
+    dataset_path = Path(dataset_root_path).resolve()
+    path_parts = dataset_path.parts
+
+    try:
+        uon_idx = path_parts.index("UON")
+    except ValueError:
+        dataset_name = dataset_path.name
+        return dataset_name, dataset_name, "default"
+
+    relative_parts = path_parts[uon_idx + 1 :]
+    if len(relative_parts) >= 3:
+        source_name = relative_parts[0]
+        task_name = relative_parts[1]
+        condition_name = relative_parts[2]
+    elif len(relative_parts) == 2:
+        source_name = relative_parts[0]
+        task_name = relative_parts[1]
+        condition_name = "default"
+    elif len(relative_parts) == 1:
+        source_name = relative_parts[0]
+        task_name = relative_parts[0]
+        condition_name = "default"
+    else:
+        dataset_name = dataset_path.name
+        source_name = dataset_name
+        task_name = dataset_name
+        condition_name = "default"
+
+    return source_name, task_name, condition_name
+
+
+def format_lr_for_name(lr: float) -> str:
+    return f"{lr:.0e}".replace("+", "")
+
+
+def build_training_condition_name(
+    color_jitter: bool,
+    use_scheduler: bool,
+    lr: float,
+    batch_size: int,
+    checkpoint_path: str,
+) -> str:
+    name_parts = []
+
+    name_parts.append("colorjitter" if color_jitter else "noaug")
+    if use_scheduler:
+        name_parts.append(SCHEDULER_NAME)
+    else:
+        name_parts.append(f"noscheduler_lr{format_lr_for_name(lr)}")
+    name_parts.append(OPTIM_NAME)
+    name_parts.append(f"{batch_size}bs")
+    if checkpoint_path:
+        name_parts.append("pretrained")
+
+    return "_".join(name_parts)
+
+
+def save_training_state(
+    save_dir: Path,
+    optimizer: torch.optim.Optimizer,
+    scheduler,
+    step: int,
+) -> None:
+    torch.save(optimizer.state_dict(), save_dir / OPTIMIZER_STATE_FILENAME)
+
+    if scheduler is not None:
+        torch.save(scheduler.state_dict(), save_dir / SCHEDULER_STATE_FILENAME)
+
+    torch.save(
+        {
+            "step": step,
+        },
+        save_dir / TRAINING_STATE_FILENAME,
+    )
+
+
+def load_training_state(
+    checkpoint_dir: Path,
+    optimizer: torch.optim.Optimizer,
+    scheduler,
+) -> int:
+    optimizer_state_path = checkpoint_dir / OPTIMIZER_STATE_FILENAME
+    scheduler_state_path = checkpoint_dir / SCHEDULER_STATE_FILENAME
+    training_state_path = checkpoint_dir / TRAINING_STATE_FILENAME
+
+    if optimizer_state_path.exists():
+        optimizer.load_state_dict(torch.load(optimizer_state_path, map_location="cpu", weights_only=False))
+        print(f"[train] Loaded optimizer state from {optimizer_state_path}")
+
+    if scheduler is not None and scheduler_state_path.exists():
+        scheduler.load_state_dict(torch.load(scheduler_state_path, map_location="cpu", weights_only=False))
+        print(f"[train] Loaded scheduler state from {scheduler_state_path}")
+
+    if training_state_path.exists():
+        training_state = torch.load(training_state_path, map_location="cpu", weights_only=False)
+        loaded_step = int(training_state.get("step", 0))
+        print(f"[train] Loaded training step={loaded_step} from {training_state_path}")
+        return loaded_step
+
+    return 0
 
 
 def build_gradcam_sample_lookup(dataset: LeRobotDataset) -> dict[tuple[int, int], int]:
@@ -266,29 +373,40 @@ def main():
     dataset_root_path = args.dataset_path
     pre_checkpoint_path = args.checkpoint_path
     output_root = Path(args.output_root)
-    wandb_project = args.project
-    wandb_run_name = args.run_name
+    source_name, task_name, condition_name = infer_dataset_identity(dataset_root_path)
     use_scheduler = False if args.use_scheduler.lower() == "false" else True
     color_jitter = False if args.color_jitter.lower() == "false" else True
+    wandb_project = args.project or f"{task_name}-{condition_name}"
+    wandb_run_name = args.run_name or build_training_condition_name(
+        color_jitter=color_jitter,
+        use_scheduler=use_scheduler,
+        lr=args.lr,
+        batch_size=args.batch_size,
+        checkpoint_path=pre_checkpoint_path,
+    )
     wandb.init(
         project=wandb_project,
         name=wandb_run_name,
         resume="allow",
         config={
-            "lr": DEFAULT_LR,
+            "lr": args.lr,
             "batch_size": args.batch_size,
             "model": "act",
             "dataset_path": dataset_root_path,
             "output_root": str(output_root),
             "training_steps": args.training_steps,
             "checkpoint_path": pre_checkpoint_path,
+            "source_name": source_name,
+            "task_name": task_name,
+            "condition_name": condition_name,
             "project": wandb_project,
             "run_name": wandb_run_name,
             "use_scheduler": use_scheduler,
+            "color_jitter": color_jitter,
         },
     )
 
-    output_directory = output_root / wandb.run.project / wandb.run.name
+    output_directory = output_root / source_name / task_name / condition_name / wandb_run_name
     output_directory.mkdir(parents=True, exist_ok=True)
     gradcam_output_dir = output_directory / GRADCAM_OUTPUT_DIRNAME
     gradcam_output_dir.mkdir(parents=True, exist_ok=True)
@@ -308,7 +426,7 @@ def main():
     cfg = ACTConfig(
         input_features=input_features,
         output_features=output_features,
-        optimizer_lr=wandb.config.lr,
+        optimizer_lr=args.lr,
     )
 
     if pre_checkpoint_path:
@@ -369,6 +487,13 @@ def main():
     image_feature_keys = list(cfg.image_features)
 
     step = 0
+    if pre_checkpoint_path:
+        step = load_training_state(
+            checkpoint_dir=Path(pre_checkpoint_path),
+            optimizer=optimizer,
+            scheduler=scheduler,
+        )
+
     done = False
     while not done:
         pbar = tqdm(dataloader, desc="Training", unit="batch")
@@ -407,11 +532,17 @@ def main():
                 )
 
             if step % SAVE_STEP == 0 and step != 0:
-                output_path = output_directory / f"{OPTIM_NAME}_{step:06d}steps_{batch_size}bs"
+                output_path = output_directory / f"{step:06d}steps"
                 output_path.mkdir(parents=True, exist_ok=True)
                 policy.save_pretrained(output_path)
                 preprocessor.save_pretrained(output_path)
                 postprocessor.save_pretrained(output_path)
+                save_training_state(
+                    save_dir=output_path,
+                    optimizer=optimizer,
+                    scheduler=scheduler,
+                    step=step,
+                )
 
             step += 1
             if step >= training_steps:

@@ -61,10 +61,10 @@ def main() -> None:
         if not root.exists():
             raise FileNotFoundError(f"Shard root does not exist: {root}")
 
-    if args.output_root.exists() and any(args.output_root.iterdir()):
-        raise FileExistsError(
-            f"Output root must be empty or not exist yet: {args.output_root}"
-        )
+    # if args.output_root.exists() and any(args.output_root.iterdir()):
+    #     raise FileExistsError(
+    #         f"Output root must be empty or not exist yet: {args.output_root}"
+    #     )
 
     repo_ids = [f"user1/shard_{idx:03d}" for idx, _ in enumerate(shard_roots)]
 
