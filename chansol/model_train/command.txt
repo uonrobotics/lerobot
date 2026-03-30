@@ -11,12 +11,182 @@ uv run /home/uon/ochansol/lerobot/chansol/model_train/act_training_with_periodic
 
 
   uv run /home/uon/ochansol/lerobot/chansol/model_train/act_training_with_periodic_gradcam.py \
-  --dataset-path /nas/Dataset/VLA/UON/Isaacsim/OMY_apple_picking/auto_fixed_place_ALL \
+  --dataset-path /nas/Dataset/VLA/UON/Isaacsim/OMY_apple_picking/auto_fixed_place_aug \
   --output-root /nas/AI_Checkpoints/VLA/act \
   --lr 1e-5 \
   --batch-size 16 \
-  --training-steps 500000 \
+  --training-steps 600000 \
   --use-scheduler False \
   --color-jitter False
 
 
+
+
+
+
+# =============================================================================
+# official lerobot-train usage
+# =============================================================================
+#
+# note:
+# - official lerobot-train itself uses --dataset.root for local paths
+# - there is no --dataset_root alias in the original command
+# - because official args are policy/environment dependent, a single command cannot
+#   literally contain every mutually-exclusive arg at once
+# - examples below show the official usage pattern directly
+
+
+# official minimal ACT example with local dataset path
+
+uv run lerobot-train \
+  --dataset.repo_id=local/Isaacsim/OMY_apple_picking/auto_fixed_place_ALL \
+  --dataset.root=/nas/Dataset/VLA/UON/Isaacsim/OMY_apple_picking/auto_fixed_place_ALL \
+  --policy.type=act \
+  --policy.device=cuda \
+  --output_dir=/nas/AI_Checkpoints/VLA/outputs/train/act_official_cli \
+  --job_name=act_official_cli \
+  --batch_size=16 \
+  --steps=100000 \
+  --num_workers=4 \
+  --log_freq=20 \
+  --save_checkpoint=true \
+  --save_freq=10000 \
+  --wandb.enable=true \
+  --wandb.project=Isaacsim_OMY_apple_picking_auto \
+  --wandb.mode=online
+
+
+# official full ACT example
+# this is the closest "many args together" example for the true lerobot-train cli
+
+uv run chansol/model_train/lerobot-train.py \
+  --dataset.repo_id=user1/repo1 \
+  --dataset.root=/nas/Dataset/VLA/UON/Isaacsim/OMY_apple_picking/auto_random_place_aug \
+  --dataset.image_transforms.enable=true \
+  --dataset.image_transforms.max_num_transforms=2 \
+  --dataset.image_transforms.random_order=true \
+  --dataset.use_imagenet_stats=true \
+  --dataset.video_backend=pyav \
+  --dataset.streaming=false \
+  --policy.type=act \
+  --policy.device=cuda \
+  --policy.use_amp=false \
+  --policy.push_to_hub=false \
+  --policy.optimizer_lr=1e-5 \
+  --policy.optimizer_weight_decay=1e-4 \
+  --policy.use_vae=true \
+  --policy.kl_weight=10.0 \
+  --policy.chunk_size=100 \
+  --output_dir=/nas/AI_Checkpoints/VLA/act/Isaacsim/OMY_apple_picking/auto_random_place_aug \
+  --job_name=act_official_full \
+  --seed=1000 \
+  --batch_size=16 \
+  --steps=100000 \
+  --num_workers=4 \
+  --log_freq=20 \
+  --save_checkpoint=true \
+  --save_freq=10000 \
+  --use_policy_training_preset=true \
+  --wandb.enable=true \
+  --wandb.project=OMY_apple_picking-auto_random_place_aug \
+  --wandb.notes='official lerobot-train full example' \
+  --wandb.mode=online
+
+
+# official example with manual optimizer / scheduler
+
+uv run lerobot-train \
+  --dataset.repo_id=local/Isaacsim/OMY_apple_picking/auto_fixed_place_ALL \
+  --dataset.root=/nas/Dataset/VLA/UON/Isaacsim/OMY_apple_picking/auto_fixed_place_ALL \
+  --policy.type=act \
+  --policy.device=cuda \
+  --policy.push_to_hub=false \
+  --output_dir=/nas/AI_Checkpoints/VLA/outputs/train/act_official_manual_optim \
+  --job_name=act_official_manual_optim \
+  --seed=1000 \
+  --batch_size=16 \
+  --steps=100000 \
+  --num_workers=4 \
+  --log_freq=20 \
+  --save_checkpoint=true \
+  --save_freq=10000 \
+  --use_policy_training_preset=false \
+  --optimizer.type=adamw \
+  --optimizer.lr=1e-5 \
+  --optimizer.weight_decay=1e-4 \
+  --optimizer.grad_clip_norm=10 \
+  --optimizer.betas='[0.9,0.999]' \
+  --optimizer.eps=1e-8 \
+  --scheduler.type=cosine_decay_with_warmup \
+  --scheduler.num_warmup_steps=1000 \
+  --scheduler.num_decay_steps=100000 \
+  --scheduler.peak_lr=1e-5 \
+  --scheduler.decay_lr=1e-6 \
+  --wandb.enable=true \
+  --wandb.project=Isaacsim_OMY_apple_picking_auto \
+  --wandb.mode=online
+
+
+# groot example
+# note:
+# - groot has extra dependency/model requirements compared with act
+# - first run may need model/tokenizer assets download
+# - start with chunk_size=16 because the groot processor/action horizon is capped there
+
+uv run chansol/model_train/lerobot-train.py \
+  --dataset.repo_id=local/Isaacsim/OMY_apple_picking/auto_random_place_aug \
+  --dataset.root=/nas/Dataset/VLA/UON/Isaacsim/OMY_apple_picking/auto_random_place_aug \
+  --dataset.video_backend=pyav \
+  --dataset.streaming=false \
+  --policy.type=groot \
+  --policy.device=cuda \
+  --policy.push_to_hub=false \
+  --policy.base_model_path=nvidia/GR00T-N1.5-3B \
+  --policy.tokenizer_assets_repo=lerobot/eagle2hg-processor-groot-n1p5 \
+  --policy.embodiment_tag=new_embodiment \
+  --policy.chunk_size=16 \
+  --policy.n_action_steps=16 \
+  --policy.max_state_dim=64 \
+  --policy.max_action_dim=32 \
+  --policy.optimizer_lr=1e-4 \
+  --policy.optimizer_weight_decay=1e-5 \
+  --policy.use_bf16=true \
+  --output_dir=/nas/AI_Checkpoints/VLA/groot/Isaacsim/OMY_apple_picking/auto_random_place_aug \
+  --job_name=groot_official_full \
+  --seed=1000 \
+  --batch_size=4 \
+  --steps=100000 \
+  --num_workers=4 \
+  --log_freq=20 \
+  --save_checkpoint=true \
+  --save_freq=5000 \
+  --use_policy_training_preset=true \
+  --wandb.enable=true \
+  --wandb.project=OMY_apple_picking-groot \
+  --wandb.notes='groot lerobot-train example' \
+  --wandb.mode=offline
+
+
+# official resume example
+# resume uses the saved train_config.json from pretrained_model
+
+uv run lerobot-train \
+  --resume=true \
+  --config_path=/nas/AI_Checkpoints/VLA/outputs/train/act_official_full/checkpoints/010000/pretrained_model/train_config.json \
+  --dataset.root=/nas/Dataset/VLA/UON/Isaacsim/OMY_apple_picking/auto_fixed_place_ALL
+
+
+# official env / eval example
+
+uv run lerobot-train \
+  --dataset.repo_id=local/Isaacsim/OMY_apple_picking/auto_fixed_place_ALL \
+  --dataset.root=/nas/Dataset/VLA/UON/Isaacsim/OMY_apple_picking/auto_fixed_place_ALL \
+  --policy.type=act \
+  --env.type=gym_manipulator \
+  --env.task=PutCube-v0 \
+  --env.fps=10 \
+  --env.episode_length=300 \
+  --eval_freq=20000 \
+  --eval.n_episodes=50 \
+  --eval.batch_size=10 \
+  --eval.use_async_envs=false
