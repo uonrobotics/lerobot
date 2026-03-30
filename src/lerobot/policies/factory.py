@@ -29,6 +29,8 @@ from lerobot.datasets.feature_utils import dataset_to_policy_features
 from lerobot.envs.configs import EnvConfig
 from lerobot.envs.utils import env_to_policy_features
 from lerobot.policies.act.configuration_act import ACTConfig
+# act vit
+from lerobot.policies.act_vit.configuration_act_vit import ACTViTConfig
 from lerobot.policies.diffusion.configuration_diffusion import DiffusionConfig
 from lerobot.policies.groot.configuration_groot import GrootConfig
 from lerobot.policies.multi_task_dit.configuration_multi_task_dit import MultiTaskDiTConfig
@@ -87,6 +89,11 @@ def get_policy_class(name: str) -> type[PreTrainedPolicy]:
         from lerobot.policies.act.modeling_act import ACTPolicy
 
         return ACTPolicy
+    # act vit 추가
+    elif name == "act_vit":
+        from lerobot.policies.act_vit.modeling_act_vit import ACTViTPolicy
+
+        return ACTViTPolicy
     elif name == "multi_task_dit":
         from lerobot.policies.multi_task_dit.modeling_multi_task_dit import MultiTaskDiTPolicy
 
@@ -167,6 +174,9 @@ def make_policy_config(policy_type: str, **kwargs) -> PreTrainedConfig:
         return DiffusionConfig(**kwargs)
     elif policy_type == "act":
         return ACTConfig(**kwargs)
+    # act vit 추가
+    elif policy_type == "act_vit":
+        return ACTViTConfig(**kwargs)
     elif policy_type == "multi_task_dit":
         return MultiTaskDiTConfig(**kwargs)
     elif policy_type == "vqbet":
@@ -315,6 +325,15 @@ def make_pre_post_processors(
             dataset_stats=kwargs.get("dataset_stats"),
         )
 
+    # act vit 추가
+    elif isinstance(policy_cfg, ACTViTConfig):
+        from lerobot.policies.act_vit.processor_act_vit import make_act_vit_pre_post_processors
+
+        processors = make_act_vit_pre_post_processors(
+            config=policy_cfg,
+            dataset_stats=kwargs.get("dataset_stats"),
+        )
+        
     elif isinstance(policy_cfg, MultiTaskDiTConfig):
         from lerobot.policies.multi_task_dit.processor_multi_task_dit import (
             make_multi_task_dit_pre_post_processors,

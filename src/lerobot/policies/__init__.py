@@ -13,6 +13,8 @@
 # limitations under the License.
 
 from .act.configuration_act import ACTConfig as ACTConfig
+# act vit 추가
+from .act_vit.configuration_act_vit import ACTViTConfig as ACTViTConfig
 from .diffusion.configuration_diffusion import DiffusionConfig as DiffusionConfig
 from .groot.configuration_groot import GrootConfig as GrootConfig
 from .multi_task_dit.configuration_multi_task_dit import MultiTaskDiTConfig as MultiTaskDiTConfig
@@ -40,4 +42,5 @@ __all__ = [
     "GrootConfig",
     "XVLAConfig",
     "WallXConfig",
+    "ACTViTConfig",
 ]
