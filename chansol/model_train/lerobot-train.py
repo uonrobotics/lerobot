@@ -125,6 +125,8 @@ def _patch_groot_resize_wrapper() -> None:
 
 def _patch_groot_processor_compat_wrapper() -> None:
     from lerobot.policies.groot import processor_groot
+    from lerobot.policies.groot.groot_n1 import DEFAULT_VENDOR_EAGLE_PATH
+    from lerobot.policies.groot.utils import ensure_eagle_cache_ready
 
     if getattr(processor_groot, "_chansol_processor_compat_patched", False):
         return
@@ -132,6 +134,12 @@ def _patch_groot_processor_compat_wrapper() -> None:
     original_build = processor_groot._build_eagle_processor
 
     def compat_build(tokenizer_assets_repo=processor_groot.DEFAULT_TOKENIZER_ASSETS_REPO):
+        cache_dir = processor_groot.HF_LEROBOT_HOME / tokenizer_assets_repo
+        ensure_eagle_cache_ready(
+            vendor_dir=Path(DEFAULT_VENDOR_EAGLE_PATH),
+            cache_dir=cache_dir,
+            assets_repo=tokenizer_assets_repo,
+        )
         proc = original_build(tokenizer_assets_repo=tokenizer_assets_repo)
         image_processor = getattr(proc, "image_processor", None)
         if image_processor is not None and not hasattr(image_processor, "_prepare_image_like_inputs"):
