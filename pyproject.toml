@@ -93,6 +93,7 @@ dependencies = [
     "timm>=1.0.0,<1.1.0",
     "decord>=0.6.0,<1.0.0",
     "ninja>=1.11.1,<2.0.0",
+    "flash-attn>=2.5.9,<3.0.0 ; sys_platform == 'linux' and (platform_machine == 'x86_64' or platform_machine == 'AMD64')",
 ]
 
 # Optional dependencies
@@ -199,6 +200,9 @@ lerobot-edit-dataset="lerobot.scripts.lerobot_edit_dataset:main"
 # ---------------- Tool Configurations ----------------
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.uv.extra-build-dependencies]
+flash-attn = ["torch"]
 
 [tool.ruff]
 target-version = "py310"
