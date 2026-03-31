@@ -13,24 +13,14 @@ from typing_extensions import override
 import numpy as np
 
 
-# pre_trained_path = "/home/uon/ochansol/lerobot/chansol/model_train/weights/isaac_omy_put_food_act_adamw_090000steps_16bs"
-# pre_trained_path = "/nas/AI_Checkpoints/VLA/act/act_demo_apple_pepper_1+2_batch16/checkpoints/last/pretrained_model"
-# pre_trained_path = "/home/uon/ochansol/lerobot/chansol/model_train/weights/isaac_omy_put_apple_act_adamw_090000steps_16bs"
 
-# dataset_root_path = "/nas/Dataset/VLA/UON/Isaacsim_OMY_apple_picking"
-# dataset_root_path = "/nas/Dataset/VLA/UON/omy_f3m_demo_apple_pepper_1+2"
 
-# pre_trained_path = "/nas/AI_Checkpoints/VLA/act/test_1_adamw_140000steps_10bs"
-# dataset_root_path = "/nas/Dataset/VLA/UON/Isaacsim_OMY_apple_picking_auto_shift4"
-
-# pre_trained_path = "/nas/AI_Checkpoints/VLA/act/Isaacsim_OMY_apple_picking_auto/shift4_filtered_gradcam/adamw_290000steps_16bs"
-# dataset_root_path = "/nas/Dataset/VLA/UON/Isaacsim_OMY_apple_picking_auto_shift4_filtered"
-
-# pre_trained_path = "/nas/AI_Checkpoints/VLA/act/Isaacsim_OMY_apple_picking_auto_augmented_shift1_merged/shift1_gradcam/adamw_040000steps_16bs"
-# dataset_root_path = "/nas/Dataset/VLA/UON/Isaacsim_OMY_apple_picking_auto_augmented_shift1_merged"
-
-pre_trained_path = "/nas/AI_Checkpoints/VLA/act/Isaacsim/OMY_apple_picking/auto_fixed_place_ALL/noaug_noscheduler_lr1e-05_adamw_16bs/300000steps"
+pre_trained_path = "/nas/AI_Checkpoints/VLA/act/Isaacsim/OMY_apple_picking/auto_fixed_place_ALL/noaug_noscheduler_lr1e-05_adamw_16bs/150000steps"
 dataset_root_path = "/nas/Dataset/VLA/UON/Isaacsim/OMY_apple_picking/auto_fixed_place_ALL"
+
+# pre_trained_path = "/nas/AI_Checkpoints/VLA/act/Isaacsim/OMY_apple_picking/auto_fixed_place_aug/noaug_noscheduler_lr1e-05_adamw_16bs/150000steps"
+# dataset_root_path = "/nas/Dataset/VLA/UON/Isaacsim/OMY_apple_picking/auto_fixed_place_aug"
+
 
 
 dataset_id = "user1/repo1"

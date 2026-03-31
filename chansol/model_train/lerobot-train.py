@@ -124,6 +124,8 @@ def _patch_groot_resize_wrapper() -> None:
 
 
 def _patch_groot_processor_compat_wrapper() -> None:
+    from shutil import copytree
+
     from lerobot.policies.groot import processor_groot
     from lerobot.policies.groot.groot_n1 import DEFAULT_VENDOR_EAGLE_PATH
     from lerobot.policies.groot.utils import ensure_eagle_cache_ready
@@ -134,13 +136,24 @@ def _patch_groot_processor_compat_wrapper() -> None:
     original_build = processor_groot._build_eagle_processor
 
     def compat_build(tokenizer_assets_repo=processor_groot.DEFAULT_TOKENIZER_ASSETS_REPO):
-        cache_dir = processor_groot.HF_LEROBOT_HOME / tokenizer_assets_repo
-        ensure_eagle_cache_ready(
-            vendor_dir=Path(DEFAULT_VENDOR_EAGLE_PATH),
-            cache_dir=cache_dir,
-            assets_repo=tokenizer_assets_repo,
+        vendor_dir = Path(DEFAULT_VENDOR_EAGLE_PATH)
+        assets_path = Path(tokenizer_assets_repo).expanduser()
+        use_local_assets = assets_path.is_absolute() or assets_path.exists()
+        cache_dir = (
+            assets_path.resolve()
+            if use_local_assets
+            else processor_groot.HF_LEROBOT_HOME / tokenizer_assets_repo
         )
-        proc = original_build(tokenizer_assets_repo=tokenizer_assets_repo)
+
+        if use_local_assets:
+            copytree(vendor_dir, cache_dir, dirs_exist_ok=True)
+        else:
+            ensure_eagle_cache_ready(
+                vendor_dir=vendor_dir,
+                cache_dir=cache_dir,
+                assets_repo=tokenizer_assets_repo,
+            )
+        proc = original_build(tokenizer_assets_repo=str(cache_dir) if use_local_assets else tokenizer_assets_repo)
         image_processor = getattr(proc, "image_processor", None)
         if image_processor is not None and not hasattr(image_processor, "_prepare_image_like_inputs"):
             image_processor.__class__._prepare_image_like_inputs = image_processor.__class__._prepare_input_images
