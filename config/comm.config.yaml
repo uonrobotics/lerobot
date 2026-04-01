@@ -1,32 +1,25 @@
 subscribers:
-  # 손목 카메라
+  # 고정형 카메라 (camera_kinect_node.py)
+  cam_top:
+      topic: '/kinect/camera/cam_top/color/image_rect_raw/compressed'
+      msg_type: "CompressedImage"
+
+  # 손목 카메라 (camera_d405_node.py)
   cam_wrist:
     topic: "/camera/cam_wrist/realsensc/color/compressed"
     msg_type: "CompressedImage"
 
-  # 팔로워
+  # 팔로워 조인트 (dsr_node.py)
   follower:
     topic: "/robot/dsr/jointStates"
     msg_type: "JointState"
 
-  # 리더암
+  # 리더암 조인트 (ros2 launch open_manipulator_bringup omy_l100_leader_ai.launch.py)
   leader:
     topic: "/leader/joint_trajectory"
     msg_type: "JointTrajectory"
 
-  tcp_tf:
-    topic: "/robot/dsr/tcp_tf"
-    msg_type: "Float64MultiArray"
-
+  # 그리퍼 (dsr_node.py)
   gripper:
     topic: "/robot/dsr/gripper_val"
     msg_type: "Float32"
-
-
-#publishers:
-#  dual_right_joint:
-#    topic: "/right_robot/leader/joint_trajectory"
-#    msg_type: "JointTrajectory"
-#  dual_left_joint:
-#    topic: "/left_robot/leader/joint_trajectory"
-#    msg_type: "JointTrajectory"

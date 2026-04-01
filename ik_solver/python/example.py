@@ -1,261 +1,250 @@
-import os
 import sys
+import os
+import math
 import numpy as np
-import threading
-import time
-import tkinter as tk
-from tkinter import ttk, messagebox
+from PyQt6.QtWidgets import (QApplication, QWidget, QVBoxLayout, QHBoxLayout,
+                             QLineEdit, QPushButton, QLabel, QMessageBox, QSlider, QRadioButton)
+from PyQt6.QtCore import Qt, QTimer
+from ik_solver import ik_solver
 
-# ik_solver 모듈 가져오기
-current_dir = os.path.dirname(os.path.abspath(__file__))
-if current_dir not in sys.path:
-    sys.path.append(current_dir)
+from typing import Any, Dict, Tuple
 
-from ik_solver import ik_solver, SharedMemory
+# ------------------------------------------------------------------
+# 공유 메모리 클래스
+# ------------------------------------------------------------------
+from multiprocessing import shared_memory, resource_tracker
+import atexit
+class SharedMemory:
+    def __init__(self, name: str, fields_config: Dict[str, Tuple[int, Any]]):
+        self.name = name
+        self.fields = {}
+        offset = 0
+        for f_name, (count, dtype) in fields_config.items():
+            item_size = 1 if dtype == str else np.dtype(dtype).itemsize
+            byte_size = count * item_size
+            self.fields[f_name] = {'offset': offset, 'count': count, 'dtype': dtype, 'byte_size': byte_size}
+            offset += byte_size
+        self.total_size = offset
 
-class RobotControlApp:
-    def __init__(self, root):
-        self.root = root
-        self.root.title("Uon Robotics - IK Solver Controller")
-        self.root.geometry("1000x750")
-
-        # 엔진 및 상태 관리
-        self.solver = None
-        self.is_running = True
-        self.lock = threading.Lock()
-
-        # 제어 목표값 및 설정값 (쓰레드 안전을 위해 별도 관리)
-        self.target_q = [0.0] * 6
-        self.target_pose = [0.0] * 6
-        self.control_mode = tk.IntVar(value=0) # 0: MoveJ, 1: MoveL
-        self.solver_mode_val = tk.IntVar(value=1) # 1: Strict, 0: Relax
-
-        # 초기 경로 설정
-        self.urdf_path = tk.StringVar(value=os.path.abspath(os.path.join(current_dir, "../contents/dsr_m1013.urdf")))
-
-        self._setup_ui()
-
-        # 연산 스레드 분리 (100Hz 목표)
-        self.calc_thread = threading.Thread(target=self._solver_loop, daemon=True)
-        self.calc_thread.start()
-
-        # UI 업데이트 타이머 (30Hz)
-        self._update_ui_periodically()
-
-    def _setup_ui(self):
-        main_frame = ttk.Frame(self.root, padding="10")
-        main_frame.pack(fill=tk.BOTH, expand=True)
-
-        # --- 상단: URDF 로드 ---
-        top_frame = ttk.LabelFrame(main_frame, text="Robot Setup", padding="5")
-        top_frame.pack(fill=tk.X, pady=(0, 10))
-        ttk.Label(top_frame, text="URDF:").pack(side=tk.LEFT)
-        ttk.Entry(top_frame, textvariable=self.urdf_path, width=70).pack(side=tk.LEFT, padx=5)
-        ttk.Button(top_frame, text="Load Robot", command=self._cb_load_robot).pack(side=tk.LEFT)
-
-        body_frame = ttk.Frame(main_frame)
-        body_frame.pack(fill=tk.BOTH, expand=True)
-
-        # --- 왼쪽: 로봇 제어 ---
-        ctrl_frame = ttk.LabelFrame(body_frame, text="Robot Control", padding="10")
-        ctrl_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 5))
-
-        mode_frame = ttk.Frame(ctrl_frame)
-        mode_frame.pack(fill=tk.X, pady=5)
-        ttk.Radiobutton(mode_frame, text="MoveJ", variable=self.control_mode, value=0, command=self._cb_mode_changed).pack(side=tk.LEFT, padx=10)
-        ttk.Radiobutton(mode_frame, text="MoveL", variable=self.control_mode, value=1, command=self._cb_mode_changed).pack(side=tk.LEFT, padx=10)
-
-        # Joint Control
-        ttk.Separator(ctrl_frame, orient=tk.HORIZONTAL).pack(fill=tk.X, pady=10)
-        ttk.Label(ctrl_frame, text="Joint Control (deg)", font=("Arial", 10, "bold")).pack(anchor=tk.W)
-        self.j_vars = []
-        self.j_vel_labels = []
-        for i in range(6):
-            f = ttk.Frame(ctrl_frame)
-            f.pack(fill=tk.X)
-            ttk.Label(f, text=f"J{i+1}:", width=4).pack(side=tk.LEFT)
-            var = tk.DoubleVar(value=0.0)
-            self.j_vars.append(var)
-            s = tk.Scale(f, from_=-360, to=360, variable=var, orient=tk.HORIZONTAL, resolution=0.01, showvalue=False, length=250, command=lambda e: self._cb_ui_input())
-            s.pack(side=tk.LEFT)
-            ttk.Entry(f, textvariable=var, width=8).pack(side=tk.LEFT, padx=5)
-            v_lbl = ttk.Label(f, text="v: 0.0", foreground="gray")
-            v_lbl.pack(side=tk.LEFT)
-            self.j_vel_labels.append(v_lbl)
-
-        # Task Control
-        ttk.Separator(ctrl_frame, orient=tk.HORIZONTAL).pack(fill=tk.X, pady=10)
-        ttk.Label(ctrl_frame, text="Task Control (m / deg)", font=("Arial", 10, "bold")).pack(anchor=tk.W)
-        self.t_vars = []
-        self.t_vel_labels = []
-        labels = ["X:", "Y:", "Z:", "R:", "P:", "Y:"]
-        ranges = [(-1.5, 1.5), (-1.5, 1.5), (0, 1.5), (-360, 360), (-360, 360), (-360, 360)]
-        for i in range(6):
-            f = ttk.Frame(ctrl_frame)
-            f.pack(fill=tk.X)
-            ttk.Label(f, text=labels[i], width=4).pack(side=tk.LEFT)
-            var = tk.DoubleVar(value=0.0)
-            self.t_vars.append(var)
-            s = tk.Scale(f, from_=ranges[i][0], to=ranges[i][1], variable=var, orient=tk.HORIZONTAL, resolution=0.001 if i<3 else 0.1, showvalue=False, length=250, command=lambda e: self._cb_ui_input())
-            s.pack(side=tk.LEFT)
-            ttk.Entry(f, textvariable=var, width=8).pack(side=tk.LEFT, padx=5)
-            v_lbl = ttk.Label(f, text="v: 0.0", foreground="gray")
-            v_lbl.pack(side=tk.LEFT)
-            self.t_vel_labels.append(v_lbl)
-
-        # --- 오른쪽: 시스템 설정 ---
-        set_frame = ttk.LabelFrame(body_frame, text="System Settings", padding="10")
-        set_frame.pack(side=tk.LEFT, fill=tk.BOTH)
-
-        # Speed & Safety
-        ttk.Label(set_frame, text="Speed & Safety", font=("Arial", 9, "bold")).pack(anchor=tk.W)
-        self.set_tcp_speed = tk.DoubleVar(value=1.0)
-        sf1 = ttk.Frame(set_frame); sf1.pack(fill=tk.X)
-        tk.Scale(sf1, from_=0, to=2, variable=self.set_tcp_speed, orient=tk.HORIZONTAL, resolution=0.1, showvalue=False).pack(side=tk.LEFT, fill=tk.X, expand=True)
-        ttk.Label(sf1, textvariable=self.set_tcp_speed, width=5).pack(side=tk.LEFT)
-
-        self.set_safety = tk.DoubleVar(value=1.2)
-        ttk.Label(set_frame, text="Safety Scale (1.0~2.0):").pack(anchor=tk.W, pady=(5,0))
-        sf2 = ttk.Frame(set_frame); sf2.pack(fill=tk.X)
-        tk.Scale(sf2, from_=1, to=2, variable=self.set_safety, orient=tk.HORIZONTAL, resolution=0.05, showvalue=False).pack(side=tk.LEFT, fill=tk.X, expand=True)
-        ttk.Label(sf2, textvariable=self.set_safety, width=5).pack(side=tk.LEFT)
-
-        # End Effector Offset
-        ttk.Separator(set_frame, orient=tk.HORIZONTAL).pack(fill=tk.X, pady=15)
-        ttk.Label(set_frame, text="End Effector Offset", font=("Arial", 9, "bold")).pack(anchor=tk.W)
-        self.ee_vars = [tk.DoubleVar(value=0.0) for _ in range(3)]
-        for i, l in enumerate(["X (m):", "Y (m):", "Z (m):"]):
-            ef = ttk.Frame(set_frame); ef.pack(fill=tk.X)
-            ttk.Label(ef, text=l, width=8).pack(side=tk.LEFT)
-            ttk.Entry(ef, textvariable=self.ee_vars[i], width=10).pack(side=tk.LEFT)
-        ttk.Button(set_frame, text="Apply EE Offset", command=self._cb_apply_ee).pack(fill=tk.X, pady=5)
-
-        # Solver Mode (Relax/Strict)
-        ttk.Separator(set_frame, orient=tk.HORIZONTAL).pack(fill=tk.X, pady=15)
-        ttk.Label(set_frame, text="Solver Mode", font=("Arial", 9, "bold")).pack(anchor=tk.W)
-        ttk.Radiobutton(set_frame, text="RELAX PATH (Speed)", variable=self.solver_mode_val, value=0, command=self._cb_apply_mode).pack(anchor=tk.W)
-        ttk.Radiobutton(set_frame, text="STRICT PATH (Accuracy)", variable=self.solver_mode_val, value=1, command=self._cb_apply_mode).pack(anchor=tk.W)
-
-        ttk.Button(set_frame, text="Apply All Settings", command=self._cb_apply_settings).pack(fill=tk.X, pady=20)
-
-    # --- Callbacks ---
-    def _cb_load_robot(self):
         try:
-            self.solver = ik_solver(self.urdf_path.get())
-            if self.solver.init():
-                messagebox.showinfo("Success", "Robot Engine Loaded.")
-                q = self.solver.get_current_joints()
-                with self.lock:
-                    self.target_q = q.tolist()
-                for i, val in enumerate(q):
-                    self.j_vars[i].set(round(val, 2))
-                self._cb_apply_settings()
-        except Exception as e:
-            messagebox.showerror("Error", str(e))
+            self.shm = shared_memory.SharedMemory(name=name, create=True, size=self.total_size)
+        except FileExistsError:
+            self.shm = shared_memory.SharedMemory(name=name)
 
-    def _cb_ui_input(self):
-        with self.lock:
-            self.target_q = [v.get() for v in self.j_vars]
-            self.target_pose = [v.get() for v in self.t_vars]
-
-    def _cb_mode_changed(self):
-        if not self.solver: return
-        with self.lock:
-            if self.control_mode.get() == 1: # MoveL 전환
-                tf = self.solver.get_tcp_tf()
-                pos = tf[:3, 3]
-                rpy = self.solver.get_tcp_rpy()
-                for i in range(3): self.target_pose[i] = pos[i]; self.t_vars[i].set(round(pos[i], 3))
-                for i in range(3): self.target_pose[i+3] = rpy[i]; self.t_vars[i+3].set(round(rpy[i], 1))
-            else: # MoveJ 전환
-                q = self.solver.get_current_joints()
-                for i in range(6): self.target_q[i] = q[i]; self.j_vars[i].set(round(q[i], 2))
-
-    def _cb_apply_ee(self):
-        if not self.solver: return
-        self.solver.set_end_effector(self.ee_vars[0].get(), self.ee_vars[1].get(), self.ee_vars[2].get(), 0, 0, 0)
-
-    def _cb_apply_mode(self):
-        if not self.solver: return
-        if self.solver_mode_val.get() == 1: self.solver.set_strict_mode()
-        else: self.solver.set_relax_mode()
-
-    def _cb_apply_settings(self):
-        if not self.solver: return
-        self.solver.set_tcp_max_speed(self.set_tcp_speed.get())
-        if hasattr(self.solver, 'solver'):
-            self.solver.solver.set_safety_scale(self.set_safety.get())
-        self._cb_apply_mode()
-        self._cb_apply_ee()
-
-    # --- Core Loops ---
-    def _solver_loop(self):
-        fields_config = {'joint': (6, np.float32), 'status': (20, str)}
-        shm = None
-        try: shm = SharedMemory(name='movej', fields_config=fields_config)
+        try:
+            resource_tracker.unregister(self.shm._name, "shared_memory")
         except: pass
+        atexit.register(self.close)
 
-        target_dt = 1.0/30.0 # 100Hz
-        while self.is_running:
-            loop_start = time.perf_counter()
+    def set(self, field_name: str, value: Any) -> None:
+        f = self.fields[field_name]
+        if f['dtype'] == str:
+            encoded = str(value).encode('utf-8')[:f['byte_size']]
+            self.shm.buf[f['offset'] : f['offset'] + len(encoded)] = encoded
+        else:
+            arr = np.ndarray((f['count'],), dtype=f['dtype'], buffer=self.shm.buf, offset=f['offset'])
+            arr[:] = value
 
-            if self.solver and self.solver.is_initialized:
-                with self.lock:
-                    mode = self.control_mode.get()
-                    q_in = list(self.target_q)
-                    p_in = list(self.target_pose)
+    def close(self) -> None:
+        if hasattr(self, 'shm'): self.shm.close()
 
-                try:
-                    if mode == 0:
-                        self.solver.movej(np.radians(q_in))
-                    else:
-                        # p_in: [x, y, z, r, p, y] - r, p, y are degrees in UI.
-                        # ik_solver.movel expects radians for rotation.
-                        p_rad = list(p_in)
-                        p_rad[3:] = np.radians(p_rad[3:])
-                        self.solver.movel(p_rad)
 
-                    if shm:
-                        shm.set('joint', self.solver.get_current_joints().astype(np.float32))
-                        shm.set('status', "run")
-                except Exception as e:
-                    print(f"Solver Error: {e}")
 
-            # 정밀한 주기 유지를 위한 동적 수면
-            elapsed = time.perf_counter() - loop_start
-            time.sleep(max(0, target_dt - elapsed))
+fields_config = {'joint': (6, np.float32), 'status': (20, str)}
+shm = SharedMemory(name='movej', fields_config=fields_config)
 
-    def _update_ui_periodically(self):
-        if self.solver and self.solver.is_initialized:
-            try:
-                j_vel = self.solver.get_current_jvel()
-                t_vel = self.solver.get_current_tcp_speed()
-                curr_q = self.solver.get_current_joints()
-                tf = self.solver.get_tcp_tf()
-                pos = tf[:3, 3]
-                rpy = self.solver.get_tcp_rpy()
 
-                for i in range(6):
-                    self.j_vel_labels[i].config(text=f"v: {j_vel[i]:.1f}")
-                    self.t_vel_labels[i].config(text=f"v: {t_vel[i]:.3f}")
 
-                if self.control_mode.get() == 1: # MoveL 중일 때 Joint UI 역갱신
-                    for i in range(6): self.j_vars[i].set(round(curr_q[i], 2))
-                else: # MoveJ 중일 때 Task UI 역갱신
-                    for i in range(3): self.t_vars[i].set(round(pos[i], 3))
-                    for i in range(3): self.t_vars[i+3].set(round(rpy[i], 1))
-            except Exception: pass
+class SimpleIkUi(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.solver = None
 
-        if self.is_running:
-            self.root.after(33, self._update_ui_periodically)
+        # 제어 데이터 (목표값)
+        self.target_q_rad = [0.0] * 6
+        self.target_pose = [0.0] * 6 # [x, y, z, r, p, y] (m, rad)
 
-    def on_close(self):
-        self.is_running = False
-        time.sleep(0.1)
-        self.root.destroy()
+        self.j_sliders = []
+        self.j_slider_labels = []
+        self.c_sliders = []
+        self.c_slider_labels = []
+        self.cart_names = ["X", "Y", "Z", "Roll", "Pitch", "Yaw"]
 
-if __name__ == "__main__":
-    root = tk.Tk()
-    app = RobotControlApp(root)
-    root.protocol("WM_DELETE_WINDOW", app.on_close)
-    root.mainloop()
+        self.current_mode = "movej"
+        self.timer = QTimer(self)
+        self.timer.timeout.connect(self.timer_callback)
+
+        self.init_ui()
+
+    def init_ui(self):
+        self.setWindowTitle('IK Solver - Seamless Controller')
+        main_layout = QVBoxLayout()
+
+        # 초기화 영역
+        self.path_input = QLineEdit(self)
+        self.path_input.setPlaceholderText("URDF 파일 경로 입력")
+        self.btn_init = QPushButton('Initialize Solver', self)
+        self.btn_init.clicked.connect(self.run_init)
+
+        self.status_label = QLabel('Status: Ready')
+        self.joint_label = QLabel('Current Status: None')
+
+        main_layout.addWidget(self.path_input)
+        main_layout.addWidget(self.btn_init)
+        main_layout.addWidget(self.status_label)
+        main_layout.addWidget(self.joint_label)
+
+        # 모드 선택
+        mode_layout = QHBoxLayout()
+        self.radio_movej = QRadioButton("MoveJ (Joint)")
+        self.radio_movel = QRadioButton("MoveL (Cartesian)")
+        self.radio_movej.setChecked(True)
+        self.radio_movej.toggled.connect(self.on_mode_switched)
+        mode_layout.addWidget(self.radio_movej)
+        mode_layout.addWidget(self.radio_movel)
+        main_layout.addLayout(mode_layout)
+
+        # MoveJ 슬라이더 (J1~J6)
+        main_layout.addWidget(QLabel("[Joint Control - deg]"))
+        for i in range(6):
+            h = QHBoxLayout()
+            lbl = QLabel(f"J{i+1}: 0")
+            lbl.setFixedWidth(60)
+            sd = QSlider(Qt.Orientation.Horizontal)
+            sd.setRange(-360, 360)
+            sd.setEnabled(False)
+            sd.valueChanged.connect(self.on_j_slider_changed)
+            h.addWidget(lbl)
+            h.addWidget(sd)
+            main_layout.addLayout(h)
+            self.j_slider_labels.append(lbl)
+            self.j_sliders.append(sd)
+
+        # MoveL 슬라이더 (X,Y,Z,R,P,Y)
+        main_layout.addWidget(QLabel("[Cartesian Control - mm, deg]"))
+        ranges = [(-1000, 1000), (-1000, 1000), (-1000, 1000), (-180, 180), (-180, 180), (-180, 180)]
+        for i, (name, (mn, mx)) in enumerate(zip(self.cart_names, ranges)):
+            h = QHBoxLayout()
+            lbl = QLabel(f"{name}: 0")
+            lbl.setFixedWidth(80)
+            sd = QSlider(Qt.Orientation.Horizontal)
+            sd.setRange(mn, mx)
+            sd.setEnabled(False)
+            sd.valueChanged.connect(self.on_c_slider_changed)
+            h.addWidget(lbl)
+            h.addWidget(sd)
+            main_layout.addLayout(h)
+            self.c_slider_labels.append(lbl)
+            self.c_sliders.append(sd)
+
+        self.setLayout(main_layout)
+
+    def run_init(self):
+        path = self.path_input.text().strip()
+        if not os.path.exists(path): return
+        try:
+            self.solver = ik_solver(path)
+            if self.solver.init():
+                self.solver.set_joint([0.0]*6)
+                self.sync_all_targets_to_current() # 현재 위치로 모든 타겟 동기화
+                self.on_mode_switched()
+                self.timer.start(20) # 50Hz 제어
+                self.status_label.setText("Status: Initialized")
+        except Exception as e:
+            QMessageBox.critical(self, "Error", str(e))
+
+    def sync_all_targets_to_current(self):
+        """로봇의 실제 현재 위치를 내부 타겟 변수에 즉시 동기화"""
+        curr_q_deg = self.solver.get_curr_joint_deg()
+        self.target_q_rad = np.deg2rad(curr_q_deg).tolist()
+        self.target_pose = self.get_current_pose_from_tf()
+
+    def on_mode_switched(self):
+        if not self.solver: return
+        is_j = self.radio_movej.isChecked()
+        self.current_mode = "movej" if is_j else "movel"
+
+        # 모드 전환 시 타겟을 현재 위치로 재동기화하여 점프 방지
+        self.sync_all_targets_to_current()
+
+        # 슬라이더 활성화 상태 제어
+        for s in self.j_sliders: s.setEnabled(is_j)
+        for s in self.c_sliders: s.setEnabled(not is_j)
+
+    def on_j_slider_changed(self):
+        if self.current_mode != "movej": return
+        vals = [s.value() for s in self.j_sliders]
+        self.target_q_rad = np.deg2rad(vals).tolist()
+
+    def on_c_slider_changed(self):
+        if self.current_mode != "movel": return
+        v = [s.value() for s in self.c_sliders]
+        self.target_pose = [v[0]/1000.0, v[1]/1000.0, v[2]/1000.0,
+                            math.radians(v[3]), math.radians(v[4]), math.radians(v[5])]
+
+    def timer_callback(self):
+        if not self.solver: return
+
+        # 제어 명령 송신
+        if self.current_mode == "movej":
+            self.solver.movej(self.target_q_rad)
+        else:
+            self.solver.movel(self.target_pose)
+
+        # UI 및 반대쪽 모드 데이터 실시간 동기화
+        self.sync_ui_and_inactive_targets()
+
+        shm.set('joint', self.solver.get_curr_joint_deg().astype(np.float32))
+        shm.set('status', "run")
+
+    def sync_ui_and_inactive_targets(self):
+        """현재 로봇 상태를 읽어와서 라벨을 갱신하고, 조작 중이지 않은 슬라이더들을 추종하게 만듦"""
+        curr_q_deg = self.solver.get_curr_joint_deg()
+        curr_pose = self.get_current_pose_from_tf()
+
+        # 공통 상태 표시
+        self.joint_label.setText(f"Joints(deg): [" + ", ".join([f"{q:.1f}" for q in curr_q_deg]) + "]")
+
+        # 1. MoveJ 모드일 때: Cartesian 슬라이더들이 로봇을 따라가게 함
+        if self.current_mode == "movej":
+            c_vals = [curr_pose[0]*1000, curr_pose[1]*1000, curr_pose[2]*1000,
+                      math.degrees(curr_pose[3]), math.degrees(curr_pose[4]), math.degrees(curr_pose[5])]
+            self.target_pose = curr_pose # 타겟 포즈도 현재 위치로 계속 갱신
+            for i, s in enumerate(self.c_sliders):
+                val = int(round(c_vals[i]))
+                s.blockSignals(True)
+                s.setValue(val)
+                s.blockSignals(False)
+                self.c_slider_labels[i].setText(f"{self.cart_names[i]}: {val}")
+            # 현재 활성 라벨 업데이트
+            for i, s in enumerate(self.j_sliders): self.j_slider_labels[i].setText(f"J{i+1}: {s.value()}")
+
+        # 2. MoveL 모드일 때: Joint 슬라이더들이 로봇을 따라가게 함
+        else:
+            self.target_q_rad = np.deg2rad(curr_q_deg).tolist() # 타겟 각도도 현재 각도로 갱신
+            for i, s in enumerate(self.j_sliders):
+                val = int(round(curr_q_deg[i]))
+                s.blockSignals(True)
+                s.setValue(val)
+                s.blockSignals(False)
+                self.j_slider_labels[i].setText(f"J{i+1}: {val}")
+            # 현재 활성 라벨 업데이트
+            for i, s in enumerate(self.c_sliders): self.c_slider_labels[i].setText(f"{self.cart_names[i]}: {s.value()}")
+
+    def get_current_pose_from_tf(self):
+        """C++ 바인딩된 Transform 객체의 메서드를 직접 사용하여 Pose 추출"""
+
+        # self.solver(파이썬 래퍼) 내부의 solver(C++ 객체)에서 Transform 객체 획득
+        tf = self.solver.solver.get_curr_tcp_tf()
+
+        # C++ Transform 클래스의 내장 함수 사용 (가장 빠르고 정확함)
+        pos = tf.translation() # [x, y, z]
+        rpy = tf.rpy()         # [roll, pitch, yaw]
+
+        return [pos[0], pos[1], pos[2], rpy[0], rpy[1], rpy[2]]
+
+if __name__ == '__main__':
+    app = QApplication(sys.argv)
+    ex = SimpleIkUi()
+    ex.show()
+    sys.exit(app.exec())

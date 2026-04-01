@@ -4,6 +4,20 @@
 
 using UrdfPtr = urdf::ModelInterfaceSharedPtr;
 
+struct CollisionInfo {
+    enum class GeometryType { NONE, BOX, CYLINDER, SPHERE, MESH };
+
+    GeometryType type = GeometryType::NONE;
+    Transform origin = Transform();
+
+    // 이 부분을 mutable로 변경합니다.
+    mutable Transform world_origin = Transform();
+
+    vec3 size = vec3::Zero();
+    std::string mesh_path = "";
+    vec3 mesh_scale = vec3::Ones();
+};
+
 // ==================================================================
 // // URDF Joint Type
 // ==================================================================
@@ -47,6 +61,8 @@ struct JointInfo {
 
     std::string mesh_path = "";   // 시각화용 메시 파일 경로 (STL, OBJ, DAE 등)
     vec3 mesh_scale = vec3::Ones(); // 메시 스케일 (URDF의 <scale> 대응)
+
+    std::vector<CollisionInfo> collisions;
 
     JointInfo() : type(JointType::UNKNOWN) {}
 };

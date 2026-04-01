@@ -1,5 +1,8 @@
 import os
 import yaml
+from multiprocessing import Process
+
+
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import Bool, Float64MultiArray, Int32, Float32
@@ -122,3 +125,33 @@ class Communicator(Node):
     def publish(self, key, msg):
         if key in self.publishers_list:
             self.publishers_list[key].publish(msg)
+
+
+
+def comm_worker(shared_msgs, config_path):
+    import rclpy
+    if not rclpy.ok():
+        rclpy.init()
+
+    node = Communicator(config_path, shared_data=shared_msgs)
+
+    if not node.init():
+        print("\n[Error] Communicator 초기화 실패. 프로세스를 종료합니다.")
+        node.destroy_node()
+        rclpy.shutdown()
+        return
+
+    try:
+        rclpy.spin(node)
+    except Exception as e:
+        print(f"Comm Process Error: {e}")
+    finally:
+        node.destroy_node()
+        rclpy.shutdown()
+
+
+def start_comm_worker(shared_msgs, config_path):
+    comm_proc = Process(target=comm_worker,args=(shared_msgs, config_path))
+    comm_proc.daemon = True
+    comm_proc.start()
+    return comm_proc

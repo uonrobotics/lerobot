@@ -88,30 +88,16 @@ public:
     const Vector3_t  translation() const { return T_.translation();           }
     const Quat_t     quaternion()  const { return Quat_t(T_.linear());        }
     TransformT       inverse()     const { return TransformT(T_.inverse());   }
+    const double     x()           const { return T_.translation().x();       }
+    const double     y()           const { return T_.translation().y();       }
+    const double     z()           const { return T_.translation().z();       }
+    const double     roll()        const { return rpy()[0];                 }
+    const double     pitch()       const { return rpy()[1];                 }
+    const double     yaw()         const { return rpy()[2];                 }
 
     const Vector3_t rpy() const
     {
-        Matrix3_t R = T_.rotation();
-        Vector3_t rpy;
-
-        // X-Y-Z Euler angles (Roll, Pitch, Yaw)
-        // R = Rx(roll) * Ry(pitch) * Rz(yaw)
-        // R = [ cy*cp          -sy*cp           sp    ]
-        //     [ sy*cr+cy*sp*sr  cy*cr-sy*sp*sr -cp*sr ]
-        //     [ sy*sr-cy*sp*cr  cy*sr+sy*sp*cr  cp*cr ]
-
-        rpy[1] = std::asin(std::clamp(R(0, 2), -1.0, 1.0)); // Pitch (theta)
-
-        if (std::abs(R(0, 2)) < 0.99999) {
-            // 일반적인 경우
-            rpy[0] = std::atan2(-R(1, 2), R(2, 2)); // Roll (phi)
-            rpy[2] = std::atan2(-R(0, 1), R(0, 0)); // Yaw (psi)
-        } else {
-            // 짐벌 락 상황
-            rpy[0] = std::atan2(R(2, 1), R(1, 1));
-            rpy[2] = 0;
-        }
-        return rpy;
+        return T_.rotation().eulerAngles(0, 1, 2); // x, y, z
     }
 
 

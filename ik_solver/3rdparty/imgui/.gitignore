@@ -1,0 +1,19 @@
+# CMake build directory
+build/
+cmake-build-*/
+
+# CMake cache and generated files
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+
+# Compiled objects and executables
+*.o
+*.obj
+*.exe
+*.out
+lib_imgui
+
+# JetBrains IDEs
+.idea/

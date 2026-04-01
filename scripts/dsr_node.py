@@ -8,12 +8,6 @@ import math
 import yaml
 import argparse
 
-# 두산 라이브러리 경로 설정
-current_dir = os.path.dirname(os.path.abspath(__file__))
-lib_dir = os.path.abspath(os.path.join(current_dir, '.', 'lib'))
-sys.path.append(lib_dir)
-# import doosan_controller_py
-from ik_solver import ik_solver
 
 # ROS 2 관련 임포트
 import rclpy
@@ -22,6 +16,24 @@ from sensor_msgs.msg import JointState
 from std_msgs.msg import Header
 from std_msgs.msg import Float64MultiArray, MultiArrayDimension
 from std_msgs.msg import Float32
+
+
+# ==================================================================
+# Ik Solver
+# ==================================================================
+current_dir = os.path.dirname(os.path.abspath(__file__))
+lib_dir = os.path.abspath(os.path.join(current_dir, '../ik_solver/python'))
+sys.path.append(lib_dir)
+from ik_solver import IkSolver
+
+
+# ==================================================================
+# 두산 로봇 - M10103
+# ==================================================================
+current_dir = os.path.dirname(os.path.abspath(__file__))
+lib_dir = os.path.abspath(os.path.join(current_dir, '../doosan_robot_controller/python'))
+sys.path.append(lib_dir)
+from doosan_robot_controller import DoosanRobotController
 
 
 # ==================================================================
@@ -176,30 +188,20 @@ class GripperController:
 
 
 # ==================================================================
-# 두산 로봇 - M10103
-# ==================================================================
-import doosan_controller_py as drc
-class M1013(drc.DoosanController):
-    def __init__(self, ip: str):
-        super().__init__(ip)
-
-
-
-
-
-
-
-
-
-# ==================================================================
 # DSR 노드: 로봇 제어 & 데이터 퍼블리셔
 # ==================================================================
 class DsrNode(Node):
-    DSR_SUB_JOINT_TOPIC_NAME   = '/leader/joint_states'   # 리더암의 joint값
+    # 퍼블리셔용
     DSR_PUB_JOINT_TOPIC_NAME   = '/robot/dsr/jointStates' # 팔로워암의 joint 값
     DSR_PUB_TF_TOPIC_NAME      = '/robot/dsr/tcp_tf'
     DSR_PUB_GRIPPER_TOPIC_NAME = '/robot/dsr/gripper_val'
-    URDF_FILE                  = '/home/uon/workspace/test_realsense/ik_solver/contents/dsr-m1013.urdf'
+    URDF_FILE                  = '/home/uon/workspace/test_realsense3/ik_solver/contents/dsr-m1013.urdf'
+
+    # 서브스크라이버용
+    DSR_SUB_JOINT_TOPIC_NAME   = '/leader/joint_states'   # 리더암의 joint값
+    DSR_SUB_INFER_TF_TOPIC_NAME = '/infer_tf_matrix' # 추론시 사용
+    DSR_SUB_INFER_GRIPPER_TOPIC_NAME = '/infer_gripper'
+
 
     def __init__(self, config_path: str = ""):
         super().__init__('dsr_node')
@@ -346,7 +348,7 @@ class DsrNode(Node):
 
         # 두산 로봇 연결
         print(f'[Info ] [dsr node] 로봇 연결중: {self.robot_ip}...')
-        self.robot = M1013(self.robot_ip)
+        self.robot = DoosanRobotController(self.robot_ip)
         self.robot.connect()
         self.robot.stop()
         time.sleep(1)
@@ -371,7 +373,7 @@ class DsrNode(Node):
         # ik solver 초기화
         if not self._iksolver_init():
             return False
-        self.solver.movej(np.radians(self.robot_idle_pose))
+        self.solver.set_joint(np.radians(self.robot_idle_pose))
 
         # 토픽 대기
         print(f'[Info ] [dsr node] 리더암 데이터 기다리는 중...')
@@ -388,7 +390,7 @@ class DsrNode(Node):
 
         # rt 제어 시작
         print(f'[Info ] [dsr node] RT 제어 모드 시작')
-        cur_joint = self.solver.get_current_joints()
+        cur_joint = self.solver.get_curr_joint_deg()
         self.robot.start_rt(cur_joint)
         time.sleep(1)
         # --- ---
@@ -424,7 +426,8 @@ class DsrNode(Node):
 
     def publish_joint(self):
         """로봇의 현재 조인트 상태를 ROS 토픽으로 발행 (루프에서 직접 호출)"""
-        current_joints = self.robot.get_current_joint()
+        # current_joints = self.robot.get_current_joint()
+        current_joints = self.solver.get_curr_joint_deg();
         msg = JointState()
         msg.header = Header()
         msg.header.stamp = self.get_clock().now().to_msg()
@@ -436,7 +439,7 @@ class DsrNode(Node):
     def publish_tf(self):
         """현재 로봇의 TCP TF 행렬(4x4)을 발행"""
         # IK Solver로부터 현재 TCP의 4x4 TF 행렬 획득
-        tf_matrix = self.solver.get_tcp_tf()
+        tf_matrix = self.solver.get_curr_tcp_tf()
 
         msg = Float64MultiArray()
         # 1차원 리스트로 변환 (4x4 -> 16개 요소)
@@ -450,7 +453,10 @@ class DsrNode(Node):
 
     def publish_gripper(self):
         """현재 로봇의 그리퍼 값을 발행"""
-        gripper_val = float(self.gripper.mapping(self.current_gripper_val))
+        # gripper_val = float(self.gripper.mapping(self.current_gripper_val))  # 200 ~ 3000
+        gripper_val = float(self.current_gripper_val)# -0.4 ~ 0.7
+        # print(f'[Info ] [dsr node] gripper_val = {gripper_val}')
+
         msg = Float32()
         msg.data = gripper_val
         self.gripper_pub.publish(msg)
@@ -472,9 +478,9 @@ class DsrNode(Node):
         self.start_time = time.time()
 
         # rt 제어
-        self.solver.movel2(self.current_tf)
-        joint = self.solver.get_current_joints() # deg
-        curr_tf = self.solver.get_tcp_tf()
+        self.solver.movel(self.current_tf)
+        joint = self.solver.get_curr_joint_deg() # deg
+        curr_tf = self.solver.get_curr_tcp_tf()
         gripper_val = int(self.gripper.mapping(self.current_gripper_val))
 
         # print(f"dt = {dt}")
@@ -487,26 +493,26 @@ class DsrNode(Node):
 
     def _iksolver_init(self):
         """Ik Solver 초기화"""
-        self.solver = ik_solver(self.URDF_FILE)                     # 솔버 생성
+        self.solver = IkSolver(self.URDF_FILE)                     # 솔버 생성
         if not self.solver.init():
             return False
 
         self.solver.set_tcp_max_speed(2.0)                          # tcp speed
         self.solver.set_joint_limit(2, 1.0, 160)                    # joint3
-        self.solver.set_workspace_limits([-1, 1], [-1, 1], [0.25, 1])# workspace
+        self.solver.set_workspace_limits([-1, 1], [0.16, 0.840], [0.255, 1])# workspace
 
         return True
 
     def _iksolver_move_ready(self):
         """리더암으로 계산된 TCP 위치로 이동 (루프 내부에서 spin_once 수행)"""
         print(f'[Info ] [dsr node] 두산 로봇 리더암 자세로 이동')
-        for i in range(5000):
+        for i in range(1000):
             # 루프 내부에서 콜백이 실행될 수 있도록 spin_once 호출
             rclpy.spin_once(self, timeout_sec=0)
 
             tf = self.current_tf
-            self.solver.movel2(tf)
-            res = self.solver.get_current_joints()
+            self.solver.movel(tf)
+            res = self.solver.get_curr_joint_deg()
 
             if i % 500 == 0:
                 print(f'[Info ] [dsr node] 리더암 자세 계산중... {i}: Position = {tf[0:3, 3]}')
@@ -515,6 +521,7 @@ class DsrNode(Node):
 
         self.robot.movej(res, 2.5)
         self.is_move_completed = True
+
 
 
 def main():

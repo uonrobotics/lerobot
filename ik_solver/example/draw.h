@@ -1,7 +1,7 @@
 #pragma once
 #include "implot3d.h"
 #include "transform.hpp"
-
+#include "kinematics.h"
 
 class Axis3D {
 private:
@@ -36,4 +36,8 @@ namespace Draw
     void draw_manipulability(const mat<3, 6>& J_position, const vec3& center, float scale, const ImVec4& color, bool is_rot);
     void draw_box(const vec3& min_pos, const vec3& max_pos);
     void draw_plane(float min_x, float max_x, float min_y, float max_y, float z = 0.0f);
+
+    void draw_collision(const CollisionInfo& col, const Transform& joint_world_tf, const ImVec4& color);
+    void draw_sphere(const vec3& center, float radius, const ImVec4& color);
+    void draw_cylinder(const vec3& center, const mat3& rotation, float radius, float height, const ImVec4& color);
 }

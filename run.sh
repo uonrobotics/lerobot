@@ -13,7 +13,16 @@ sleep 0.5
 gnome-terminal --tab \
   --title="d405_node" \
   -- bash -ic "conda activate dsr; \
-              python /home/uon/workspace/test_realsense/scripts/d405_node.py; \
+              python /home/uon/workspace/test_realsense/scripts/camera_d405_node.py; \
+              exec bash"
+
+sleep 0.5
+
+# 키넥트 카메라 노드
+gnome-terminal --tab \
+  --title="kinect_node" \
+  -- bash -ic "conda activate dsr; \
+              python /home/uon/workspace/test_realsense/scripts/camera_kinect_node.py; \
               exec bash"
 
 sleep 0.5
@@ -31,5 +40,5 @@ sleep 0.5
 gnome-terminal --tab \
   --title="main: lerobot data collector" \
   -- bash -ic "conda activate dsr; \
-              python /home/uon/workspace/test_realsense/main.py; \
+              python /home/uon/workspace/test_realsense3/main_dataset_joint.py; \
               exec bash"

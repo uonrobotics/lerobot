@@ -1,0 +1,294 @@
+<?xml version="1.0"?>
+<robot name="omy_f3m">
+
+  <!-- Links -->
+  <link name="world">
+  </link>
+
+  <link name="link0">
+    <inertial>
+      <origin xyz="-0.004022 0.001308 0.055073" rpy="0 0 0"/>
+      <mass value="1.528749"/>
+      <inertia ixx="0.004643" ixy="0.000044" ixz="-0.00015" iyy="0.004974" iyz="0.000021" izz="0.006408"/>
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="package://open_manipulator_description/meshes/omy_f3m/base_unit.stl"/>
+      </geometry>
+      <material name="grey">
+        <color rgba="0.2 0.2 0.2 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0.03" rpy="0 0 0"/>
+      <geometry>
+        <cylinder radius="0.08" length="0.05"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <link name="link1">
+    <inertial>
+      <origin xyz="-0.000111 -0.005471 -0.015898" rpy="0 0 0"/>
+      <mass value="2.064883"/>
+      <inertia ixx="0.003033" ixy="0.000005" ixz="0.000003" iyy="0.002728" iyz="0.000179" izz="0.002283"/>
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="package://open_manipulator_description/meshes/omy_f3m/link1.stl"/>
+      </geometry>
+      <material name="grey">
+        <color rgba="0.2 0.2 0.2 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 -0.01 -0.035" rpy="0 0 0"/>
+      <geometry>
+        <cylinder radius="0.055" length="0.1"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <link name="link2">
+    <inertial>
+      <origin xyz="0.000011 0.016184 0.103606" rpy="0 0 0"/>
+      <mass value="3.67954"/>
+      <inertia ixx="0.051732" ixy="0.000002" ixz="0.000058" iyy="0.050353" iyz="-0.000438" izz="0.004501"/>
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="package://open_manipulator_description/meshes/omy_f3m/link2.stl"/>
+      </geometry>
+      <material name="grey">
+        <color rgba="0.2 0.2 0.2 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.005 -0.02 0.13" rpy="0 0 0"/>
+      <geometry>
+        <cylinder radius="0.046" length="0.28"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <link name="link3">
+    <inertial>
+      <origin xyz="0.000078 0.107185 0.141173" rpy="0 0 0"/>
+      <mass value="2.386592"/>
+      <inertia ixx="0.022694" ixy="-0.000001" ixz="-0.000019" iyy="0.02192" iyz="0.000192" izz="0.002776"/>
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="package://open_manipulator_description/meshes/omy_f3m/link3.stl"/>
+      </geometry>
+      <material name="grey">
+        <color rgba="0.2 0.2 0.2 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0.125 0.08" rpy="0 0 0"/>
+      <geometry>
+        <cylinder radius="0.042" length="0.17"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <link name="link4">
+    <inertial>
+      <origin xyz="-0.000133 -0.107467 0.019091" rpy="0 0 0"/>
+      <mass value="1.400235"/>
+      <inertia ixx="0.001755" ixy="-0.000005" ixz="-0.000002" iyy="0.001565" iyz="0.000153" izz="0.001216"/>
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="package://open_manipulator_description/meshes/omy_f3m/link4.stl"/>
+      </geometry>
+      <material name="grey">
+        <color rgba="0.2 0.2 0.2 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="1.57 0 0"/>
+      <geometry>
+        <cylinder radius="0.045" length="0.1"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <link name="link5">
+    <inertial>
+      <origin xyz="0.000133 -0.019091 0.109967" rpy="0 0 0"/>
+      <mass value="1.400235"/>
+      <inertia ixx="0.001755" ixy="-0.000002" ixz="-0.000005" iyy="0.001216" iyz="0.000153" izz="0.001565"/>
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="package://open_manipulator_description/meshes/omy_f3m/link5.stl"/>
+      </geometry>
+      <material name="grey">
+        <color rgba="0.2 0.2 0.2 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0.01 0.005" rpy="0 0 0"/>
+      <geometry>
+        <cylinder radius="0.043" length="0.05"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <link name="link6">
+    <inertial>
+      <origin xyz="0.000011 -0.080594 0.009303" rpy="0 0 0"/>
+      <mass value="0.400155"/>
+      <inertia ixx="0.000567" ixy="0" ixz="-0.000001" iyy="0.00063" iyz="-0.000056" izz="0.000199"/>
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="package://open_manipulator_description/meshes/omy_f3m/link6.stl"/>
+      </geometry>
+      <material name="grey">
+        <color rgba="0.2 0.2 0.2 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 -0.1 0" rpy="1.57 0 0"/>
+      <geometry>
+        <cylinder radius="0.08" length="0.22"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <link name="flange">
+    <inertial>
+      <origin xyz="0 -0.00319 0" rpy="0 0 0"/>
+      <mass value="0.016619"/>
+      <inertia ixx="0.000003" ixy="0" ixz="0" iyy="0.000008" iyz="0" izz="0.000005"/>
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="package://open_manipulator_description/meshes/omy_f3m/flange.stl"/>
+      </geometry>
+      <material name="grey">
+        <color rgba="0.2 0.2 0.2 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0.03 0.04" rpy="0 0 0"/>
+      <geometry>
+        <cylinder radius="0.035" length="0.12"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <link name="end_effector">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="1"/>
+      <inertia ixx="0.001" ixy="0" ixz="0" iyy="0.001" iyz="0" izz="0.001"/>
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.1 0.1 0.1"/>
+      </geometry>
+      <material name="blue">
+        <color rgba="0 0 0.8 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.1 0.1 0.1"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <!-- Joints -->
+  <joint name="world_fixed" type="fixed">
+    <parent link="world"/>
+    <child link="link0"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <axis xyz="0 0 1"/>
+    <dynamics damping="0" friction="0"/>
+  </joint>
+
+  <joint name="joint1" type="revolute">
+    <parent link="link0"/>
+    <child link="link1"/>
+    <origin xyz="0 0 0.1715" rpy="0 0 0"/>
+    <axis xyz="0 0 1"/>
+    <limit lower="-6.283185" upper="6.283185" effort="1000" velocity="4.363323"/>
+    <dynamics damping="0.05" friction="0"/>
+  </joint>
+
+  <joint name="joint2" type="revolute">
+    <parent link="link1"/>
+    <child link="link2"/>
+    <origin xyz="0 -0.1215 0" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="-6.283185" upper="6.283185" effort="1000" velocity="4.363323"/>
+    <dynamics damping="0.1" friction="0"/>
+  </joint>
+
+  <joint name="joint3" type="revolute">
+    <parent link="link2"/>
+    <child link="link3"/>
+    <origin xyz="0 0 0.247" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="0.017453" upper="2.617994" effort="1000" velocity="4.363323"/>
+    <dynamics damping="0.1" friction="0"/>
+  </joint>
+
+  <joint name="joint4" type="revolute">
+    <parent link="link3"/>
+    <child link="link4"/>
+    <origin xyz="0 0.1215 0.2195" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="-6.283185" upper="6.283185" effort="1000" velocity="4.363323"/>
+    <dynamics damping="0.1" friction="0"/>
+  </joint>
+
+  <joint name="joint5" type="revolute">
+    <parent link="link4"/>
+    <child link="link5"/>
+    <origin xyz="0 -0.113 0" rpy="0 0 0"/>
+    <axis xyz="0 0 1"/>
+    <limit lower="-6.283185" upper="6.283185" effort="1000" velocity="4.363323"/>
+    <dynamics damping="0.1" friction="0"/>
+  </joint>
+
+  <joint name="joint6" type="revolute">
+    <parent link="link5"/>
+    <child link="link6"/>
+    <origin xyz="0 0 0.1155" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="-6.283185" upper="6.283185" effort="1000" velocity="4.363323"/>
+    <dynamics damping="0.1" friction="0"/>
+  </joint>
+
+  <joint name="flange" type="fixed">
+    <parent link="link6"/>
+    <child link="flange"/>
+    <origin xyz="0 -0.103 0" rpy="0 0 0"/>
+    <axis xyz="0 0 1"/>
+    <dynamics damping="0" friction="0"/>
+  </joint>
+
+  <joint name="end_effector" type="fixed">
+    <parent link="flange"/>
+    <child link="end_effector"/>
+    <origin xyz="0 -0.116999 0" rpy="1.570796 -1.570796 0"/>
+    <axis xyz="0 0 1"/>
+    <dynamics damping="0" friction="0"/>
+  </joint>
+
+</robot>

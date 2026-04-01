@@ -1,4 +1,5 @@
 import json
+from multiprocessing import Process, Value
 from pathlib import Path
 from lerobot.datasets.lerobot_dataset import LeRobotDataset
 ROOT_PATH = Path.home() / '.cache/huggingface/lerobot'
@@ -104,3 +105,47 @@ def create_lerobot_dataset(repo_id: str, features: dict, fps: int, robot_type: s
         print(f'[Info ] 새 데이터셋이 생성되었습니다: {dataset_path}')
 
     return dataset
+
+
+def dataset_worker(queue, repo_id, features, fps, robot_type, mode, is_saving_val):
+    dataset = create_lerobot_dataset(repo_id=repo_id,
+                                     features=features,
+                                     fps=fps,
+                                     robot_type=robot_type,
+                                     mode=mode)
+    if dataset is None:
+        return
+
+    while True:
+        try:
+            msg = queue.get()
+            if msg is None: break
+
+            cmd = msg.get('cmd')
+
+            if cmd == 'add_frame':
+                dataset.add_frame(msg['data'])
+            elif cmd == 'save':
+                # 저장 시작: True (1)
+                is_saving_val.value = 1
+                print(f'\n[Dataset Process] 에피소드 저장 중...')
+                dataset.save_episode()
+                # 저장 완료: False (0)
+                is_saving_val.value = 0
+                print(f'[Dataset Process] 에피소드 저장 완료')
+            elif cmd == 'cancel':
+                dataset.clear_episode_buffer()
+                print(f'[Info ] [Dataset Process] 에피소드 버퍼 초기화 완료.')
+            elif cmd == 'done':
+                dataset.finalize()
+                print(f'[Info ] [Dataset Process] 데이터셋 저장 완료!')
+                break
+        except Exception as e:
+            print(f"[Dataset Process Error] {e}")
+            is_saving_val.value = 0 # 에러 발생 시 상태 초기화
+
+
+def start_dataset_worker(queue, repo_id, features, fps, dataset_mode, is_saving_val):
+    dataset_proc = Process(target=dataset_worker, args=(queue, repo_id, features, fps, 'omy_f3m', dataset_mode, is_saving_val))
+    dataset_proc.daemon = False
+    dataset_proc.start()

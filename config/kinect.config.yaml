@@ -1,0 +1,14 @@
+kinect_node:
+  ros__parameters:
+    color_resolution: 720
+    depth_mode: false
+    fps: 30
+    enable_depth: false
+    color_topic: "/kinect/camera/cam_top/color/image_rect_raw/compressed"
+    depth_topic: "/kinect/camera/cam_top/depth/image_rect_raw/compressed"
+    roi:
+      enabled: true
+      x: 300
+      y: 0
+      width: 630
+      height: 720

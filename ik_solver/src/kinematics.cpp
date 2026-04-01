@@ -80,6 +80,11 @@ void Kinematics::_update_tf() const
 
 UrdfPtr Kinematics::load_urdf_file(const std::string& urdf_file)
 {
+    if (urdf_file.empty()) {
+        ERROR << "URDF 파일 경로가 비어있습니다." << endl;
+        return nullptr;
+    }
+
     fs::path full_path = fs::absolute(urdf_file);
 
     // 파일 체크
@@ -106,7 +111,7 @@ Kinematics Kinematics::build_from_urdf(const UrdfPtr& urdf, const std::string& j
     auto urdf_joint = urdf->getJoint(joint_name);
 
     if (!urdf_joint) {
-        WARN << "Joint 정보가 없음: " << joint_name << endl;
+        WARN << "URDF에 Joint 속성이 없음: " << joint_name << endl;
         return Kinematics();
     }
 
@@ -150,6 +155,46 @@ Kinematics Kinematics::build_from_urdf(const UrdfPtr& urdf, const std::string& j
             auto mesh = std::static_pointer_cast<urdf::Mesh>(child_link->visual->geometry);
             k.joint_info_.mesh_path = mesh->filename;
             k.joint_info_.mesh_scale = vec3(mesh->scale.x, mesh->scale.y, mesh->scale.z);
+        }
+    }
+
+    if (child_link) {
+        // --- Collision 정보 파싱 시작 ---
+        for (const auto& col : child_link->collision_array) {
+            if (!col || !col->geometry) continue;
+
+            CollisionInfo info;
+
+            // 1. Origin 파싱
+            const urdf::Pose& p = col->origin;
+            quat q(p.rotation.w, p.rotation.x, p.rotation.y, p.rotation.z);
+            vec3 t(p.position.x, p.position.y, p.position.z);
+            info.origin = Transform(q, t);
+
+            // 2. Geometry 파싱
+            if (col->geometry->type == urdf::Geometry::BOX) {
+                auto box = std::static_pointer_cast<urdf::Box>(col->geometry);
+                info.type = CollisionInfo::GeometryType::BOX;
+                info.size = vec3(box->dim.x, box->dim.y, box->dim.z);
+            }
+            else if (col->geometry->type == urdf::Geometry::CYLINDER) {
+                auto cyl = std::static_pointer_cast<urdf::Cylinder>(col->geometry);
+                info.type = CollisionInfo::GeometryType::CYLINDER;
+                info.size = vec3(cyl->radius, cyl->length, 0.0);
+            }
+            else if (col->geometry->type == urdf::Geometry::SPHERE) {
+                auto sph = std::static_pointer_cast<urdf::Sphere>(col->geometry);
+                info.type = CollisionInfo::GeometryType::SPHERE;
+                info.size = vec3(sph->radius, 0.0, 0.0);
+            }
+            else if (col->geometry->type == urdf::Geometry::MESH) {
+                auto mesh = std::static_pointer_cast<urdf::Mesh>(col->geometry);
+                info.type = CollisionInfo::GeometryType::MESH;
+                info.mesh_path = mesh->filename;
+                info.mesh_scale = vec3(mesh->scale.x, mesh->scale.y, mesh->scale.z);
+            }
+
+            k.joint_info_.collisions.push_back(info);
         }
     }
 

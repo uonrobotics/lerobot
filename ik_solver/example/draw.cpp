@@ -193,3 +193,55 @@ void Draw::draw_plane(float min_x, float max_x, float min_y, float max_y, float 
 
     ImPlot3D::PopStyleColor();
 }
+
+// draw.cpp
+
+void Draw::draw_collision(const CollisionInfo& col, const Transform& joint_world_tf, const ImVec4& color) {
+    // 조인트 위치 기준 콜리전의 상대 위치(col.origin)를 적용하여 월드 변환 계산
+    Transform world_tf = joint_world_tf * col.origin;
+    vec3 pos = world_tf.translation();
+    mat3 rot = world_tf.rotation();
+
+    if (col.type == CollisionInfo::GeometryType::BOX) {
+        // 박스의 8개 정점 계산 후 draw_box 활용 (단, draw_box가 AABB 기준이므로 OBB용으로 새로 구현하거나 transform 적용 필요)
+        // 여기서는 간단히 중심점 기준 size/2만큼 떨어진 지점들에 rot 적용
+        vec3 h = col.size * 0.5; // half size
+        vec3 corners[8] = {
+            pos + rot * vec3(-h.x(), -h.y(), -h.z()), pos + rot * vec3(h.x(), -h.y(), -h.z()),
+            pos + rot * vec3(h.x(), h.y(), -h.z()),   pos + rot * vec3(-h.x(), h.y(), -h.z()),
+            pos + rot * vec3(-h.x(), -h.y(), h.z()),  pos + rot * vec3(h.x(), -h.y(), h.z()),
+            pos + rot * vec3(h.x(), h.y(), h.z()),    pos + rot * vec3(-h.x(), h.y(), h.z())
+        };
+        // 각 변 연결 (ImPlot3D::PlotLine 사용)
+        auto draw_line = [&](int i, int j) {
+            float xs[2] = {(float)corners[i].x(), (float)corners[j].x()};
+            float ys[2] = {(float)corners[i].y(), (float)corners[j].y()};
+            float zs[2] = {(float)corners[i].z(), (float)corners[j].z()};
+            ImPlot3D::SetNextLineStyle(color, 1.0f);
+            ImPlot3D::PlotLine("##col_box", xs, ys, zs, 2);
+        };
+        for(int i=0; i<4; i++) { draw_line(i, (i+1)%4); draw_line(i+4, (i+5)%4); draw_line(i, i+4); }
+    }
+    else if (col.type == CollisionInfo::GeometryType::SPHERE) {
+        draw_sphere(pos, col.size.x(), color);
+    }
+}
+
+void Draw::draw_sphere(const vec3& center, float radius, const ImVec4& color) {
+    // 3개 축 방향의 원을 그려 구 형태 표현
+    const int segments = 16;
+    for (int axis = 0; axis < 3; axis++) {
+        std::vector<float> xs, ys, zs;
+        for (int i = 0; i <= segments; i++) {
+            float angle = 2.0f * M_PI * i / segments;
+            vec3 p = vec3::Zero();
+            if (axis == 0) p = vec3(0, cos(angle), sin(angle));
+            else if (axis == 1) p = vec3(cos(angle), 0, sin(angle));
+            else p = vec3(cos(angle), sin(angle), 0);
+            p = center + p * radius;
+            xs.push_back(p.x()); ys.push_back(p.y()); zs.push_back(p.z());
+        }
+        ImPlot3D::SetNextLineStyle(color, 1.0f);
+        ImPlot3D::PlotLine("##col_sphere", xs.data(), ys.data(), zs.data(), xs.size());
+    }
+}

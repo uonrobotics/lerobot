@@ -3,6 +3,20 @@
 
   <!-- Links -->
   <link name="base">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="1"/>
+      <inertia ixx="0.001" ixy="0" ixz="0" iyy="0.001" iyz="0" izz="0.001"/>
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.1 0.1 0.1"/>
+      </geometry>
+      <material name="blue">
+        <color rgba="0 0 0.8 1"/>
+      </material>
+    </visual>
   </link>
 
   <link name="base_0">
@@ -14,7 +28,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0"/>
       <geometry>
-        <mesh filename="package://dsr_description/meshes/m1013/MF1013_0_0.dae"/>
+        <box size="0.1 0.1 0.1"/>
       </geometry>
       <material name="dr_gray">
         <color rgba="0.5 0.5 0.5 1"/>
@@ -31,12 +45,18 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0"/>
       <geometry>
-        <mesh filename="package://dsr_description/meshes/m1013/MF1013_1_0.dae"/>
+        <box size="0.1 0.1 0.1"/>
       </geometry>
       <material name="dr_white">
         <color rgba="0.5 0.5 0.5 1"/>
       </material>
     </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.1 0.1 0.1"/>
+      </geometry>
+    </collision>
   </link>
 
   <link name="link2">
@@ -48,12 +68,18 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0"/>
       <geometry>
-        <mesh filename="package://dsr_description/meshes/m1013/MF1013_2_0.dae"/>
+        <box size="0.1 0.1 0.1"/>
       </geometry>
       <material name="dr_white">
         <color rgba="0.5 0.5 0.5 1"/>
       </material>
     </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.1 0.1 0"/>
+      </geometry>
+    </collision>
   </link>
 
   <link name="link3">
@@ -65,12 +91,18 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0"/>
       <geometry>
-        <mesh filename="package://dsr_description/meshes/m1013/MF1013_3_0.dae"/>
+        <box size="0.1 0.1 0.1"/>
       </geometry>
       <material name="dr_white">
         <color rgba="0.5 0.5 0.5 1"/>
       </material>
     </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.1 0.1 0.1"/>
+      </geometry>
+    </collision>
   </link>
 
   <link name="link4">
@@ -82,12 +114,18 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0"/>
       <geometry>
-        <mesh filename="package://dsr_description/meshes/m1013/MF1013_4_0.dae"/>
+        <box size="0.1 0.1 0.1"/>
       </geometry>
       <material name="dr_white">
         <color rgba="0.5 0.5 0.5 1"/>
       </material>
     </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.1 0.1 0.1"/>
+      </geometry>
+    </collision>
   </link>
 
   <link name="link5">
@@ -99,12 +137,18 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0"/>
       <geometry>
-        <mesh filename="package://dsr_description/meshes/m1013/MF1013_5_0.dae"/>
+        <box size="0.1 0.1 0.1"/>
       </geometry>
       <material name="dr_white">
         <color rgba="0.5 0.5 0.5 1"/>
       </material>
     </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.1 0.1 0.1"/>
+      </geometry>
+    </collision>
   </link>
 
   <link name="link6">
@@ -116,12 +160,64 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0"/>
       <geometry>
-        <mesh filename="package://dsr_description/meshes/m1013/MF1013_6_0.dae"/>
+        <box size="0.1 0.1 0.1"/>
       </geometry>
       <material name="dr_gray">
         <color rgba="0.5 0.5 0.5 1"/>
       </material>
     </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.1 0.1 0.1"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <link name="flange">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="1"/>
+      <inertia ixx="0.001" ixy="0" ixz="0" iyy="0.001" iyz="0" izz="0.001"/>
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.1 0.1 0.1"/>
+      </geometry>
+      <material name="blue">
+        <color rgba="0 0 0.8 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.1 0.1 0.1"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <link name="end_effector">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="1"/>
+      <inertia ixx="0.001" ixy="0" ixz="0" iyy="0.001" iyz="0" izz="0.001"/>
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.1 0.1 0.1"/>
+      </geometry>
+      <material name="blue">
+        <color rgba="0 0 0.8 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.1 0.1 0.1"/>
+      </geometry>
+    </collision>
   </link>
 
   <!-- Joints -->
@@ -184,6 +280,22 @@
     <origin xyz="0 -0.121 0" rpy="1.571 0 0"/>
     <axis xyz="0 0 1"/>
     <limit lower="-6.283185" upper="6.283185" effort="30" velocity="4.45059"/>
+    <dynamics damping="0" friction="0"/>
+  </joint>
+
+  <joint name="flange" type="fixed">
+    <parent link="link6"/>
+    <child link="flange"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <axis xyz="0 0 1"/>
+    <dynamics damping="0" friction="0"/>
+  </joint>
+
+  <joint name="end_effector" type="fixed">
+    <parent link="flange"/>
+    <child link="end_effector"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <axis xyz="0 0 1"/>
     <dynamics damping="0" friction="0"/>
   </joint>
 
