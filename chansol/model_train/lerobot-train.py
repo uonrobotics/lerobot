@@ -445,7 +445,7 @@ def train(cfg: TrainPipelineConfig, accelerator: Accelerator | None = None):
         initial=step,
         desc="Training",
         unit="step",
-        disable=not is_main_process,
+        disable=True,
         dynamic_ncols=True,
     )
     try:
