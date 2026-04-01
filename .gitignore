@@ -178,3 +178,10 @@ outputs/
 *.xml
 *.part
 .codex
+0401_vit_rollout
+0401_vit_rollout_trans_aug
+0401_vit_rollout_trans_aug_90k
+0401_vit_rollout_trans_aug_120k
+0401_vit_rollout_trans_aug_180k
+vit_rollout_debug_freeze
+vit_rollout_debug_fullft

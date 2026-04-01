@@ -501,10 +501,10 @@ class ACTViT(nn.Module):
             # gradients remain stable (no explosions or NaNs).
             
             for image_key, img in zip(image_keys, batch[OBS_IMAGES]):
-                import pdb; pdb.set_trace()
+                # import pdb; pdb.set_trace()
                 if image_key == self.config.top_camera_key and self.top_cam_backbone is not None:
-                    print("Using ViT backbone for top camera")
-                    print("vit branch", image_key, img.shape)
+                    # print("Using ViT backbone for top camera")
+                    # print("vit branch", image_key, img.shape)
 
                     vit_img = F.interpolate(
                         img,

@@ -206,11 +206,16 @@ class ImageTransformsConfig:
                 type="SharpnessJitter",
                 kwargs={"sharpness": (0.5, 1.5)},
             ),
-            "affine": ImageTransformConfig(
-                weight=1.0,
-                type="RandomAffine",
-                kwargs={"degrees": (-5.0, 5.0), "translate": (0.05, 0.05)},
+            "blur": ImageTransformConfig(
+                weight=0.3,
+                type="GaussianBlur",
+                kwargs={"kernel_size": 3, "sigma": (0.1, 1.2)},
             ),
+            # "affine": ImageTransformConfig(
+            #     weight=1.0,
+            #     type="RandomAffine",
+            #     kwargs={"degrees": (-5.0, 5.0), "translate": (0.05, 0.05)},
+            # ),
         }
     )
 
