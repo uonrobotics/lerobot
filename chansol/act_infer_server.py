@@ -15,7 +15,7 @@ from typing_extensions import override
 import numpy as np
 
 
-pre_trained_path = "/nas/AI_Checkpoints/VLA/act_vit/Isaacsim/0331_act_vit_aug_fullft_trans/checkpoints/150000/pretrained_model"
+pre_trained_path = "/nas/AI_Checkpoints/VLA/act_vit/Isaacsim/0401_act_vit_aug_fullft_trans_vit_freeze/checkpoints/090000/pretrained_model"
 dataset_root_path = "/nas/Dataset/VLA/UON/Isaacsim/OMY_apple_picking/auto_fixed_place_aug"
 
 dataset_id = "user1/repo1"

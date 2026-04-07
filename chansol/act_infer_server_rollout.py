@@ -18,13 +18,15 @@ import numpy as np
 import os
 import cv2
 import math
+import queue
+import threading
 import imageio.v2 as imageio
 import torch.nn.functional as F
 from pathlib import Path
 
-pre_trained_path = "/nas/AI_Checkpoints/VLA/act_vit/Isaacsim/0331_act_vit_aug_fullft_trans/checkpoints/120000/pretrained_model"
+pre_trained_path = "/nas/AI_Checkpoints/VLA/act_vit/Isaacsim/0331_act_vit_aug_fullft_trans/checkpoints/180000/pretrained_model"
 dataset_root_path = "/nas/Dataset/VLA/UON/Isaacsim/OMY_apple_picking/auto_fixed_place_aug"
-
+ 
 
 dataset_id = "user1/repo1"
 
@@ -44,21 +46,59 @@ class ViTRolloutDebugger:
         self,
         save_dir="./vit_rollout_debug_freeze",
         sample_every=1,
-        max_frames=120,
+        max_frames: Optional[int] = 120,
         alpha=0.45,
+        gif_every=0,
+        max_pending_writes=32,
     ):
         self.save_dir = Path(save_dir)
         self.save_dir.mkdir(parents=True, exist_ok=True)
 
-        self.frames_dir = self.save_dir / "frames"
+        self.frames_dir = self.save_dir / "tmp_frames"
         self.frames_dir.mkdir(parents=True, exist_ok=True)
 
         self.sample_every = sample_every
         self.max_frames = max_frames
         self.alpha = alpha
+        self.gif_every = gif_every
 
         self.frame_idx = 0
         self.saved_paths = []
+        self.write_queue: queue.Queue[tuple[str, Any]] = queue.Queue(maxsize=max_pending_writes)
+        self.writer_thread = threading.Thread(
+            target=self._writer_loop,
+            name="vit-rollout-writer",
+            daemon=True,
+        )
+        self.writer_thread.start()
+
+    def _writer_loop(self):
+        while True:
+            job_type, payload = self.write_queue.get()
+            try:
+                if job_type == "frame":
+                    out_path, overlay = payload
+                    imageio.imwrite(out_path, overlay)
+                    self.saved_paths.append(str(out_path))
+                    print(f"[Rollout] saved: {out_path}")
+                elif job_type == "gif":
+                    self._make_gif_sync(payload)
+                elif job_type == "stop":
+                    if payload is not None:
+                        self._make_gif_sync(payload)
+                    return
+            except Exception as e:
+                print("[Rollout] writer failed:", repr(e))
+            finally:
+                self.write_queue.task_done()
+
+    def _enqueue_job(self, job_type: str, payload: Any) -> bool:
+        try:
+            self.write_queue.put_nowait((job_type, payload))
+            return True
+        except queue.Full:
+            print(f"[Rollout] skipped {job_type}: writer queue is full")
+            return False
 
     def _find_topcam_tensor(self, proc_obs: Dict[str, Any]) -> torch.Tensor:
         # preprocess 결과에서 top cam tensor 찾기
@@ -71,7 +111,7 @@ class ViTRolloutDebugger:
 
         if len(candidates) == 0:
             raise KeyError(
-                f"top cam tensor를 못 찾았어. proc_obs keys = {list(proc_obs.keys())}"
+                f"top cam tensor not found. proc_obs keys = {list(proc_obs.keys())}"
             )
 
         print("[Rollout] using topcam key:", candidates[0][0])
@@ -142,7 +182,7 @@ class ViTRolloutDebugger:
 
         num_patches = cls_to_patch.shape[-1]
         side = int(math.sqrt(num_patches))
-        assert side * side == num_patches, f"patch 수 이상함: {num_patches}"
+        assert side * side == num_patches, f"unexpected number of patches: {num_patches}"
 
         mask = cls_to_patch[0].reshape(side, side).detach().float().cpu().numpy()
         mask = mask - mask.min()
@@ -194,7 +234,8 @@ class ViTRolloutDebugger:
             self.frame_idx += 1
             return
 
-        if len(self.saved_paths) >= self.max_frames:
+        expected_saved = self.frame_idx // max(self.sample_every, 1)
+        if self.max_frames is not None and self.max_frames > 0 and expected_saved >= self.max_frames:
             self.frame_idx += 1
             return
 
@@ -202,18 +243,15 @@ class ViTRolloutDebugger:
         mask = self.compute_rollout(model, topcam_tensor)
         overlay = self.overlay_on_image(raw_top_img, mask)
 
-        out_path = self.frames_dir / f"frame_{len(self.saved_paths):04d}.png"
-        imageio.imwrite(out_path, overlay)
-        self.saved_paths.append(str(out_path))
-
-        print(f"[Rollout] saved: {out_path}")
+        out_path = self.frames_dir / f"frame_{expected_saved:04d}.png"
+        self._enqueue_job("frame", (out_path, overlay))
         self.frame_idx += 1
 
-        # 중간중간 gif 갱신
-        if len(self.saved_paths) > 0 and len(self.saved_paths) % 20 == 0:
-            self.make_gif()
+        # 필요할 때만 백그라운드에서 gif 생성
+        if self.gif_every > 0 and (expected_saved + 1) % self.gif_every == 0:
+            self._enqueue_job("gif", 5)
 
-    def make_gif(self, fps=5):
+    def _make_gif_sync(self, fps=5):
         if len(self.saved_paths) == 0:
             return
 
@@ -221,12 +259,21 @@ class ViTRolloutDebugger:
         gif_path = self.save_dir / "rollout.gif"
         imageio.mimsave(gif_path, images, fps=fps)
         print(f"[Rollout] gif saved: {gif_path}")
+
+    def make_gif(self, fps=5):
+        self.write_queue.join()
+        self._make_gif_sync(fps=fps)
+
+    def close(self, fps=5):
+        self.write_queue.put(("stop", fps))
+        self.writer_thread.join()
     
 rollout_debugger = ViTRolloutDebugger(
-    save_dir="./0401_vit_rollout_trans_aug_120k",
-    sample_every=1,     # 매 프레임 저장
-    max_frames=160,     # 최대 160프레임
+    save_dir="./0401_vit_act_aug_fullft_add_trans_180k",
+    sample_every=3,     # 매 프레임 저장
+    max_frames=None,    # None 또는 0이면 종료할 때까지 계속 저장
     alpha=0.45,
+    gif_every=0,        # 0이면 종료 시점에만 gif 생성
 )
 
 def infer_fn(images, obss, action_type) -> Dict[str, Any]:
@@ -279,4 +326,4 @@ server = vla_server.VLARpcServer(cfg, infer_fn=infer_fn)
 try:
     server.start_forever()
 finally:
-    rollout_debugger.make_gif(fps=5)
+    rollout_debugger.close(fps=5)

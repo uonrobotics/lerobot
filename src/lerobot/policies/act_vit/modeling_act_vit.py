@@ -342,6 +342,12 @@ class ACTViT(nn.Module):
             # Note: The forward method of this returns a dict: {"feature_map": output}.
             self.backbone = IntermediateLayerGetter(backbone_model, return_layers={"layer4": "feature_map"})
             
+            # resnet backbone 까지 고정하고 학습하려고 달았음.
+            # Freeze backbone 
+            exit()
+            for p in self.backbone.parameters():
+                p.requires_grad = False
+                        
             # top cam 용 vit backbone
             self.top_camera_uses_vit = self.config.top_camera_encoder == "vit"
             self.top_cam_backbone = None

@@ -185,3 +185,8 @@ outputs/
 0401_vit_rollout_trans_aug_180k
 vit_rollout_debug_freeze
 vit_rollout_debug_fullft
+0401_vit_act_aug_fullft_180k
+0401_vit_act_aug_fullft_add_trans_180k
+0402_vit_rollout_150k
+vit_act_freeze_150k
+vit_act_fullft_150k
