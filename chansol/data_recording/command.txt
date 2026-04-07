@@ -15,23 +15,23 @@ uv run python /home/uon/ochansol/lerobot/chansol/data_recording/convert_to_lerob
 or 
 
 uv run python /home/uon/ochansol/lerobot/chansol/data_recording/convert_to_lerobot_shard.py \
-  --data_root /nas/Dataset/VLA/UON/Isaacsim/OMY_apple_picking/auto_fixed_place_aug \
+  --data_root /nas/Dataset/VLA/UON/Isaacsim/OMY_apple_picking/auto_fixed_place_random_light \
   --shift 1 \
   --episodes_per_shard 100 \
-  --save_path /nas/Dataset/VLA/UON/shards/Isaacsim/OMY_apple_picking/auto_fixed_place_aug/shard_00 \
+  --save_path /nas/Dataset/VLA/UON/shards/Isaacsim/OMY_apple_picking/auto_fixed_place_random_light/shard_00 \
   --shard_index 0
 
 ################3
 
 uv run python /home/uon/ochansol/lerobot/chansol/data_recording/merge_lerobot_shards.py \
   --shard-roots \
-    /nas/Dataset/VLA/UON/shards/Isaacsim/OMY_apple_picking/auto_random_place_aug/shard_00 \
-    /nas/Dataset/VLA/UON/shards/Isaacsim/OMY_apple_picking/auto_random_place_aug/shard_01 \
-    /nas/Dataset/VLA/UON/shards/Isaacsim/OMY_apple_picking/auto_random_place_aug/shard_02 \
-    /nas/Dataset/VLA/UON/shards/Isaacsim/OMY_apple_picking/auto_random_place_aug/shard_03 \
-    /nas/Dataset/VLA/UON/shards/Isaacsim/OMY_apple_picking/auto_random_place_aug/shard_04 \
-    /nas/Dataset/VLA/UON/shards/Isaacsim/OMY_apple_picking/auto_random_place_aug/shard_05\
-    /nas/Dataset/VLA/UON/shards/Isaacsim/OMY_apple_picking/auto_random_place_aug/shard_06 \
-    /nas/Dataset/VLA/UON/shards/Isaacsim/OMY_apple_picking/auto_random_place_aug/shard_07 \
-  --output-root /nas/Dataset/VLA/UON/Isaacsim/OMY_apple_picking/auto_random_place_aug \
+    /nas/Dataset/VLA/UON/shards/Isaacsim/OMY_apple_picking/auto_fixed_place_random_light_aug_detect/shard_00 \
+    /nas/Dataset/VLA/UON/shards/Isaacsim/OMY_apple_picking/auto_fixed_place_random_light_aug_detect/shard_01 \
+    /nas/Dataset/VLA/UON/shards/Isaacsim/OMY_apple_picking/auto_fixed_place_random_light_aug_detect/shard_02 \
+    /nas/Dataset/VLA/UON/shards/Isaacsim/OMY_apple_picking/auto_fixed_place_random_light_aug_detect/shard_03 \
+    /nas/Dataset/VLA/UON/shards/Isaacsim/OMY_apple_picking/auto_fixed_place_random_light_aug_detect/shard_04 \
+    /nas/Dataset/VLA/UON/shards/Isaacsim/OMY_apple_picking/auto_fixed_place_random_light_aug_detect/shard_05\
+    /nas/Dataset/VLA/UON/shards/Isaacsim/OMY_apple_picking/auto_fixed_place_random_light_aug_detect/shard_06 \
+    /nas/Dataset/VLA/UON/shards/Isaacsim/OMY_apple_picking/auto_fixed_place_random_light_aug_detect/shard_07 \
+  --output-root /nas/Dataset/VLA/UON/Isaacsim/OMY_apple_picking/auto_fixed_place_random_light_aug_detect \
   --output-repo-id user1/repo1

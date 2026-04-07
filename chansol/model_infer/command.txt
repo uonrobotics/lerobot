@@ -1,0 +1,35 @@
+# GR00T inference server + LIPO
+uv run chansol/model_infer/groot_infer_server.py \
+  --pretrained-path /nas/AI_Checkpoints/VLA/groot/Isaacsim/OMY_apple_picking/auto_random_place_aug/checkpoints/045000/pretrained_model \
+  --dataset-root /nas/Dataset/VLA/UON/Isaacsim/OMY_apple_picking/auto_random_place_aug \
+  --dataset-id user1/repo1 \
+  --use-lipo \
+  --lipo-solver osqp \
+  --lipo-blending-horizon 3 \
+  --lipo-time-delay 0 \
+  --lipo-dt 0.0333
+
+# GR00T inference server without LIPO
+uv run chansol/model_infer/groot_infer_server.py \
+  --pretrained-path /nas/AI_Checkpoints/VLA/groot/Isaacsim/OMY_apple_picking/auto_random_place_aug/checkpoints/045000/pretrained_model \
+  --dataset-root /nas/Dataset/VLA/UON/Isaacsim/OMY_apple_picking/auto_random_place_aug \
+  --dataset-id user1/repo1 \
+  --no-use-lipo
+
+# ACT inference server + LIPO
+uv run chansol/model_infer/act_infer_server.py \
+  --pretrained-path /nas/AI_Checkpoints/VLA/act/Isaacsim/OMY_apple_picking/auto_fixed_place_ALL/noaug_noscheduler_lr1e-05_adamw_16bs/200000steps \
+  --dataset-root /nas/Dataset/VLA/UON/Isaacsim/OMY_apple_picking/auto_fixed_place_ALL \
+  --dataset-id user1/repo1 \
+  --use-lipo \
+  --lipo-solver osqp \
+  --lipo-blending-horizon 10 \
+  --lipo-time-delay 0 \
+  --lipo-dt 0.0333
+
+# ACT inference server without LIPO
+uv run chansol/model_infer/act_infer_server.py \
+  --pretrained-path /nas/AI_Checkpoints/VLA/act/Isaacsim/OMY_apple_picking/auto_fixed_place_ALL/noaug_noscheduler_lr1e-05_adamw_16bs/150000steps \
+  --dataset-root /nas/Dataset/VLA/UON/Isaacsim/OMY_apple_picking/auto_fixed_place_ALL \
+  --dataset-id user1/repo1 \
+  --no-use-lipo

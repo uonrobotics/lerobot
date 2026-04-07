@@ -25,7 +25,7 @@ from lerobot.policies.act.modeling_act import ACTPolicy
 from lerobot.policies.factory import make_pre_post_processors
 from lerobot.policies.utils import build_inference_frame
 
-from act_gradcam import (
+from ..model_train.act_gradcam import (
     compute_action_aware_gradcam,
     compute_cnn_only_gradcam,
     compute_joint_observation_saliency,

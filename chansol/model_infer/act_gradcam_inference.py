@@ -13,7 +13,7 @@ from lerobot.datasets.lerobot_dataset import LeRobotDataset, LeRobotDatasetMetad
 from lerobot.policies.act.modeling_act import ACTPolicy
 from lerobot.policies.factory import make_pre_post_processors
 
-from act_gradcam import (
+from ..model_train.act_gradcam import (
     build_single_sample_batch,
     compute_action_aware_gradcam,
     compute_cnn_only_gradcam,
