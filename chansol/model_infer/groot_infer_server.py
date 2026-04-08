@@ -248,7 +248,7 @@ class GrootInferenceServer:
         raise ValueError(f"Expected action chunk with 1 or 2 dims, got shape {action_chunk.shape}")
 
     @torch.inference_mode()
-    def infer_fn(self, images, obss, action_type=None):
+    def infer_fn(self, images, obss, task, action_type=None):
         if isinstance(action_type, str) and "reset" in action_type.lower():
             self.reset()
 
@@ -256,6 +256,7 @@ class GrootInferenceServer:
         if len(self.action_queue) == 0:
             obs_frame = build_inference_frame(
                 observation=raw_observation,
+                task=task,
                 ds_features=self.dataset_metadata.features,
                 device=self.device,
             )

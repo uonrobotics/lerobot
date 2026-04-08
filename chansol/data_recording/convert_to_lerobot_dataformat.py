@@ -69,9 +69,6 @@ def main():
         for i in tqdm(range(data.total_data_num), desc=f'Episode {ep_num} Recording'):
 
 
-            img_top = data.get_image_top()
-            img_wrist = data.get_image_wrist()
-
             # 관절 변환
             follower_numpy, time_stamp = data.get_follower_action(dtype=np.float32)
             leader_numpy = data.get_leader_action(shift=shift, dtype=np.float32)
@@ -80,8 +77,10 @@ def main():
 
 
             frame_data = {
-                'observation.images.cam_top': img_top,
-                'observation.images.cam_wrist': img_wrist,
+                'observation.images.cam_top': data.get_image_top(),
+                'observation.images.cam_wrist': data.get_image_wrist(),
+                'observation.depth.cam_top': data.get_depth_top(),
+                'observation.depth.cam_wrist': data.get_depth_wrist(),
                 'observation.state': follower_numpy,
                 'action': leader_numpy,
                 'task': cfg.TASK_DESCRIPTION,
