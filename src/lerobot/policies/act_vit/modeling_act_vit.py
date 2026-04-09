@@ -344,7 +344,7 @@ class ACTViT(nn.Module):
             
             # resnet backbone 까지 고정하고 학습하려고 달았음.
             # Freeze backbone 
-            exit()
+            # exit()
             for p in self.backbone.parameters():
                 p.requires_grad = False
                         

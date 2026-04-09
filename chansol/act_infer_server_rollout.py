@@ -1,3 +1,4 @@
+import argparse
 import torch
 from lerobot.datasets.lerobot_dataset import LeRobotDatasetMetadata
 from lerobot.policies.act.modeling_act import ACTPolicy
@@ -24,9 +25,31 @@ import imageio.v2 as imageio
 import torch.nn.functional as F
 from pathlib import Path
 
-pre_trained_path = "/nas/AI_Checkpoints/VLA/act_vit/Isaacsim/0331_act_vit_aug_fullft_trans/checkpoints/180000/pretrained_model"
+def parse_args():
+    parser = argparse.ArgumentParser(description="ACT-ViT inference server with rollout/grad-cam debug")
+    parser.add_argument(
+        "--rollout-camera",
+        choices=["top", "wrist", "both"],
+        default="both",
+        help="Which camera visualization to save",
+    )
+    parser.add_argument(
+        "--rollout-save-dir",
+        default="./0409_vit_rollout_vision_freeze_300k",
+        help="Base directory for rollout outputs",
+    )
+    parser.add_argument("--rollout-sample-every", type=int, default=5, help="Save every N frames")
+    parser.add_argument("--rollout-max-frames", type=int, default=0, help="Maximum saved frames, 0 means unlimited")
+    parser.add_argument("--rollout-width", type=int, default=640, help="Saved rollout image width")
+    parser.add_argument("--rollout-height", type=int, default=360, help="Saved rollout image height")
+    return parser.parse_args()
+
+
+ARGS = parse_args()
+
+pre_trained_path = "/nas/AI_Checkpoints/VLA/act_vit/Isaacsim/0402_act_vit_vision_freeze/checkpoints/300000/pretrained_model"
+# pre_trained_path = "/nas/AI_Checkpoints/VLA/act_vit/Isaacsim/0401_act_vit_aug_fullft_trans_vit_freeze/checkpoints/150000/pretrained_model"
 dataset_root_path = "/nas/Dataset/VLA/UON/Isaacsim/OMY_apple_picking/auto_fixed_place_aug"
- 
 
 dataset_id = "user1/repo1"
 
@@ -41,20 +64,27 @@ dataset_metadata = LeRobotDatasetMetadata(
 )
 preprocess, postprocess = make_pre_post_processors(model.config, dataset_stats=dataset_metadata.stats)
 
-class ViTRolloutDebugger:
+class CameraRolloutDebugger:
     def __init__(
         self,
-        save_dir="./vit_rollout_debug_freeze",
+        camera_name: str,
+        viz_mode: str,
+        gif_filename: str,
+        save_dir="./0409_vit_rollout_vit_freeze_180k",
         sample_every=1,
         max_frames: Optional[int] = 120,
         alpha=0.45,
         gif_every=0,
         max_pending_writes=32,
     ):
+        self.camera_name = camera_name
+        self.viz_mode = viz_mode
+        self.gif_filename = gif_filename
+        self.output_size = (640, 360) if camera_name == "top" else (848, 480)
         self.save_dir = Path(save_dir)
         self.save_dir.mkdir(parents=True, exist_ok=True)
 
-        self.frames_dir = self.save_dir / "tmp_frames"
+        self.frames_dir = self.save_dir / f"tmp_frames_{self.camera_name}"
         self.frames_dir.mkdir(parents=True, exist_ok=True)
 
         self.sample_every = sample_every
@@ -100,29 +130,31 @@ class ViTRolloutDebugger:
             print(f"[Rollout] skipped {job_type}: writer queue is full")
             return False
 
-    def _find_topcam_tensor(self, proc_obs: Dict[str, Any]) -> torch.Tensor:
-        # preprocess 결과에서 top cam tensor 찾기
-        # 보통 key 예: observation.images.cam_top
+    def _find_camera_tensor(self, proc_obs: Dict[str, Any]) -> torch.Tensor:
         candidates = []
         for k, v in proc_obs.items():
             if torch.is_tensor(v) and v.ndim == 4:
-                if ("cam_top" in k) or (k.endswith("images.top")) or (k.endswith("top")):
+                if self.camera_name == "top":
+                    matched = ("cam_top" in k) or (k.endswith("images.top")) or (k.endswith("top"))
+                else:
+                    matched = ("cam_wrist" in k) or ("wrist" in k)
+                if matched:
                     candidates.append((k, v))
 
         if len(candidates) == 0:
             raise KeyError(
-                f"top cam tensor not found. proc_obs keys = {list(proc_obs.keys())}"
+                f"{self.camera_name} cam tensor not found. proc_obs keys = {list(proc_obs.keys())}"
             )
 
-        print("[Rollout] using topcam key:", candidates[0][0])
+        print(f"[Rollout] using {self.camera_name} cam key:", candidates[0][0])
         return candidates[0][1]
 
     @torch.no_grad()
-    def compute_rollout(self, model, topcam_tensor: torch.Tensor) -> np.ndarray:
+    def compute_top_rollout(self, model, camera_tensor: torch.Tensor) -> np.ndarray:
         model.eval()
 
         vit_img = F.interpolate(
-            topcam_tensor,
+            camera_tensor,
             size=(384, 384),
             mode="bilinear",
             align_corners=False,
@@ -191,6 +223,41 @@ class ViTRolloutDebugger:
 
         return mask
 
+    def compute_wrist_gradcam(self, model, proc_obs: Dict[str, Any]) -> np.ndarray:
+        wrist_tensor = self._find_camera_tensor(proc_obs).detach().clone()
+        wrist_tensor.requires_grad_(True)
+
+        was_training = model.training
+        model.eval()
+        model.zero_grad(set_to_none=True)
+
+        try:
+            with torch.enable_grad():
+                feature_map = model.model.backbone(wrist_tensor)["feature_map"]
+                feature_map.retain_grad()
+                projected = model.model.encoder_img_feat_input_proj(feature_map)
+                target = projected.abs().mean()
+                target.backward()
+
+            grad = feature_map.grad
+            if grad is None:
+                raise RuntimeError("wrist Grad-CAM could not read gradients from feature_map")
+
+            act = feature_map
+            weights = grad.mean(dim=(2, 3), keepdim=True)
+            cam = (weights * act).sum(dim=1)
+            cam = torch.relu(cam)
+
+            cam = cam[0]
+            cam = cam - cam.min()
+            if cam.max() > 1e-8:
+                cam = cam / cam.max()
+            return cam.detach().float().cpu().numpy()
+        finally:
+            model.zero_grad(set_to_none=True)
+            if was_training:
+                model.train()
+
     def overlay_on_image(self, raw_img: np.ndarray, mask_24: np.ndarray) -> np.ndarray:
         """
         raw_img: HWC uint8
@@ -227,9 +294,12 @@ class ViTRolloutDebugger:
         small = cv2.cvtColor(small, cv2.COLOR_BGR2RGB)
         overlay[10:170, 10:170] = small
 
+        if self.output_size[0] > 0 and self.output_size[1] > 0:
+            overlay = cv2.resize(overlay, self.output_size, interpolation=cv2.INTER_AREA)
+
         return overlay
 
-    def maybe_save(self, model, proc_obs: Dict[str, Any], raw_top_img: np.ndarray):
+    def maybe_save(self, model, proc_obs: Dict[str, Any], raw_img: np.ndarray):
         if self.frame_idx % self.sample_every != 0:
             self.frame_idx += 1
             return
@@ -239,9 +309,12 @@ class ViTRolloutDebugger:
             self.frame_idx += 1
             return
 
-        topcam_tensor = self._find_topcam_tensor(proc_obs)
-        mask = self.compute_rollout(model, topcam_tensor)
-        overlay = self.overlay_on_image(raw_top_img, mask)
+        camera_tensor = self._find_camera_tensor(proc_obs)
+        if self.viz_mode == "top_rollout":
+            mask = self.compute_top_rollout(model, camera_tensor)
+        else:
+            mask = self.compute_wrist_gradcam(model, proc_obs)
+        overlay = self.overlay_on_image(raw_img, mask)
 
         out_path = self.frames_dir / f"frame_{expected_saved:04d}.png"
         self._enqueue_job("frame", (out_path, overlay))
@@ -252,11 +325,13 @@ class ViTRolloutDebugger:
             self._enqueue_job("gif", 5)
 
     def _make_gif_sync(self, fps=5):
-        if len(self.saved_paths) == 0:
+        frame_paths = sorted(self.frames_dir.glob("frame_*.png"))
+        if len(frame_paths) == 0:
+            print(f"[Rollout] no frames found for {self.camera_name}, skipping gif")
             return
 
-        images = [imageio.imread(p) for p in self.saved_paths]
-        gif_path = self.save_dir / "rollout.gif"
+        images = [imageio.imread(p) for p in frame_paths]
+        gif_path = self.save_dir / self.gif_filename
         imageio.mimsave(gif_path, images, fps=fps)
         print(f"[Rollout] gif saved: {gif_path}")
 
@@ -267,14 +342,44 @@ class ViTRolloutDebugger:
     def close(self, fps=5):
         self.write_queue.put(("stop", fps))
         self.writer_thread.join()
-    
-rollout_debugger = ViTRolloutDebugger(
-    save_dir="./0401_vit_act_aug_fullft_add_trans_180k",
-    sample_every=3,     # 매 프레임 저장
-    max_frames=None,    # None 또는 0이면 종료할 때까지 계속 저장
-    alpha=0.45,
-    gif_every=0,        # 0이면 종료 시점에만 gif 생성
-)
+
+
+def build_rollout_debuggers() -> list[CameraRolloutDebugger]:
+    max_frames = None if ARGS.rollout_max_frames <= 0 else ARGS.rollout_max_frames
+    debuggers: list[CameraRolloutDebugger] = []
+
+    if ARGS.rollout_camera in ("top", "both"):
+        debuggers.append(
+            CameraRolloutDebugger(
+                camera_name="top",
+                viz_mode="top_rollout",
+                gif_filename="top_cam.gif" if ARGS.rollout_camera == "both" else "rollout.gif",
+                save_dir=ARGS.rollout_save_dir,
+                sample_every=ARGS.rollout_sample_every,
+                max_frames=max_frames,
+                alpha=0.45,
+                gif_every=0,
+            )
+        )
+
+    if ARGS.rollout_camera in ("wrist", "both"):
+        debuggers.append(
+            CameraRolloutDebugger(
+                camera_name="wrist",
+                viz_mode="wrist_gradcam",
+                gif_filename="wrist_cam.gif" if ARGS.rollout_camera == "both" else "rollout.gif",
+                save_dir=ARGS.rollout_save_dir,
+                sample_every=ARGS.rollout_sample_every,
+                max_frames=max_frames,
+                alpha=0.45,
+                gif_every=0,
+            )
+        )
+
+    return debuggers
+
+
+rollout_debuggers = build_rollout_debuggers()
 
 def infer_fn(images, obss, action_type) -> Dict[str, Any]:
 
@@ -304,10 +409,17 @@ def infer_fn(images, obss, action_type) -> Dict[str, Any]:
     # rollout 저장
     # ----------------------------
     try:
-        raw_top_img = images["full"]
-        rollout_debugger.maybe_save(model, proc_obs, raw_top_img)
+        raw_images = {
+            "top": images["full"],
+            "wrist": images["wrist"],
+        }
+        for debugger in rollout_debuggers:
+            try:
+                debugger.maybe_save(model, proc_obs, raw_images[debugger.camera_name])
+            except Exception as e:
+                print(f"[Rollout] {debugger.camera_name} failed:", repr(e))
     except Exception as e:
-        print("[Rollout] failed:", repr(e))
+        print("[Rollout] setup failed:", repr(e))
 
     action = model.select_action(proc_obs)
     action = postprocess(action)
@@ -324,6 +436,10 @@ server = vla_server.VLARpcServer(cfg, infer_fn=infer_fn)
 
 
 try:
+    print(f"Starting VLA Inference Server with Rollout Debugger... camera={ARGS.rollout_camera}")
     server.start_forever()
+except KeyboardInterrupt:
+    print("\n[Rollout] Ctrl+C detected. Finalizing GIFs before exit...")
 finally:
-    rollout_debugger.close(fps=5)
+    for debugger in rollout_debuggers:
+        debugger.close(fps=5)
