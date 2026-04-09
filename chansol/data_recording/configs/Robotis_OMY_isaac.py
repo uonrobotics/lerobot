@@ -12,14 +12,6 @@ FEATURES = {
             'channels'
         ]
     },
-    'observation.depth.cam_top': {
-        'dtype': 'video',
-        'shape': (720, 1280),
-        'names': [
-            'height',
-            'width'
-        ]
-    },
     'observation.images.cam_wrist': {
         'dtype': 'video',
         'shape': (480, 848, 3),
@@ -29,15 +21,6 @@ FEATURES = {
             'channels'
         ]
     },
-    'observation.depth.cam_wrist': {
-        'dtype': 'video',
-        'shape': (480, 848),
-        'names': [
-            'height',
-            'width'
-        ]
-    },
-
     'observation.state': {
         'dtype': 'float32',
         'shape': (7,),

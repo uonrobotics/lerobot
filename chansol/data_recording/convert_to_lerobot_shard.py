@@ -6,7 +6,8 @@ from pathlib import Path
 import numpy as np
 from tqdm import tqdm
 
-import Robotis_OMY_isaac_configs as cfg
+# import configs.Robotis_OMY_isaac as cfg
+import configs.Robotis_OMY_isaac_depth as cfg
 from get_data import DataAggregator
 from lerobot.datasets.lerobot_dataset import LeRobotDataset
 
@@ -125,6 +126,8 @@ def main() -> None:
         for _ in tqdm(range(data.total_data_num), desc=f"Episode {ep_num} Recording"):
             img_top = data.get_image_top()
             img_wrist = data.get_image_wrist()
+            depth_top = data.get_depth_top()
+            depth_wrist = data.get_depth_wrist()
 
             follower_numpy, time_stamp = data.get_follower_action(dtype=np.float32)
             leader_numpy = data.get_leader_action(shift=args.shift, dtype=np.float32)
@@ -133,6 +136,8 @@ def main() -> None:
             frame_data = {
                 "observation.images.cam_top": img_top,
                 "observation.images.cam_wrist": img_wrist,
+                "observation.depth.cam_top": depth_top,
+                "observation.depth.cam_wrist": depth_wrist,
                 "observation.state": follower_numpy,
                 "action": leader_numpy,
                 "task": cfg.TASK_DESCRIPTION,

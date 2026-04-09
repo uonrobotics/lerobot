@@ -8,6 +8,7 @@ class DataAggregator():
         self.data_root_path = data_root_path
         self.action_dir_path = "action"
         self.rgb_dir_path = "rgb"
+        self.depth_dir_path = "depth"
 
         self.wrist_dir_path = "cam_wrist"
         self.top_dir_path = "cam_top"
@@ -20,17 +21,25 @@ class DataAggregator():
         self.step_idx = 0
         wrist_img_path = os.path.join(self.data_root_path, self.rgb_dir_path, f"{episode_num:04d}", self.wrist_dir_path)
         top_img_path   = os.path.join(self.data_root_path, self.rgb_dir_path, f"{episode_num:04d}", self.top_dir_path)
+        wrist_depth_path = os.path.join(self.data_root_path, self.depth_dir_path, f"{episode_num:04d}", self.wrist_dir_path)
+        top_depth_path   = os.path.join(self.data_root_path, self.depth_dir_path, f"{episode_num:04d}", self.top_dir_path)
         action_path    = os.path.join(self.data_root_path, self.action_dir_path)
 
         if not os.path.exists(wrist_img_path):
             raise FileNotFoundError(f"Wrist image path not found: {wrist_img_path}")
         if not os.path.exists(top_img_path):
             raise FileNotFoundError(f"Top image path not found: {top_img_path}")
+        if not os.path.exists(wrist_depth_path):
+            raise FileNotFoundError(f"Wrist depth path not found: {wrist_depth_path}")
+        if not os.path.exists(top_depth_path):
+            raise FileNotFoundError(f"Top depth path not found: {top_depth_path}")
         if not os.path.exists(action_path):
             raise FileNotFoundError(f"Action path not found: {action_path}")
 
         self.wrist_img_list = sorted([os.path.join(wrist_img_path, img)       for img in os.listdir(wrist_img_path) if img.endswith('.png')])
-        self.top_img_list   = sorted([os.path.join(top_img_path, img)         for img in os.listdir(top_img_path) if img.endswith('.png')])    
+        self.top_img_list   = sorted([os.path.join(top_img_path, img)         for img in os.listdir(top_img_path) if img.endswith('.png')])
+        self.wrist_depth_list = sorted([os.path.join(wrist_depth_path, img)   for img in os.listdir(wrist_depth_path) if img.endswith('.npy')])
+        self.top_depth_list   = sorted([os.path.join(top_depth_path, img)     for img in os.listdir(top_depth_path) if img.endswith('.npy')])
         self.action_list    = os.path.join(action_path, f"{episode_num:04d}.json")
 
         self.action = json.load(open(self.action_list, 'r'))
@@ -46,6 +55,12 @@ class DataAggregator():
     def get_image_top(self):
         img = Image.open(self.top_img_list[self.step_idx])
         img = np.array(img)[..., :3]
+        return img
+    def get_depth_wrist(self):
+        img = np.load(self.wrist_depth_list[self.step_idx])
+        return img
+    def get_depth_top(self):
+        img = np.load(self.top_depth_list[self.step_idx])
         return img
     
     def cal_action_idx(self):
