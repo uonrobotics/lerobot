@@ -33,32 +33,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--depth-min",
         type=float,
-        default=None,
-        help="Global minimum depth value used for uint8 quantization. If omitted, estimated from the dataset slice.",
+        default=0.0,
+        help="Global minimum depth value in meters used for uint8 quantization.",
     )
     parser.add_argument(
         "--depth-max",
         type=float,
-        default=None,
-        help="Global maximum depth value used for uint8 quantization. If omitted, estimated from the dataset slice.",
-    )
-    parser.add_argument(
-        "--depth-low-percentile",
-        type=float,
-        default=1.0,
-        help="Lower percentile used when estimating depth-min automatically.",
-    )
-    parser.add_argument(
-        "--depth-high-percentile",
-        type=float,
-        default=99.0,
-        help="Upper percentile used when estimating depth-max automatically.",
-    )
-    parser.add_argument(
-        "--depth-estimation-samples-per-episode",
-        type=int,
-        default=16,
-        help="Number of depth frames sampled per episode when estimating quantization range.",
+        default=3.5,
+        help="Global maximum depth value in meters used for uint8 quantization.",
     )
     return parser.parse_args()
 
@@ -120,46 +102,6 @@ def encode_depth_as_video_frame(
     normalized = (depth - depth_min) / scale
     quantized = np.round(normalized * 255.0).astype(np.uint8)
     return np.repeat(quantized[..., None], 3, axis=2)
-
-
-def estimate_depth_range(
-    data: DataAggregator,
-    episode_ids: list[int],
-    *,
-    low_percentile: float,
-    high_percentile: float,
-    samples_per_episode: int,
-) -> tuple[float, float]:
-    samples: list[np.ndarray] = []
-
-    for ep_num in tqdm(episode_ids, desc="Estimating depth range"):
-        data.setup(ep_num)
-        total = data.total_data_num
-        if total <= 0:
-            continue
-
-        sample_count = min(samples_per_episode, total)
-        frame_indices = np.linspace(0, total - 1, sample_count, dtype=int)
-        for idx in frame_indices:
-            data.step_idx = int(idx)
-            for depth in (data.get_depth_top(), data.get_depth_wrist()):
-                flat = np.asarray(depth, dtype=np.float32).reshape(-1)
-                finite = flat[np.isfinite(flat)]
-                if finite.size > 0:
-                    samples.append(finite)
-
-    if not samples:
-        raise RuntimeError("Could not estimate depth range because no finite depth values were found.")
-
-    merged = np.concatenate(samples, axis=0)
-    depth_min = float(np.percentile(merged, low_percentile))
-    depth_max = float(np.percentile(merged, high_percentile))
-
-    if not np.isfinite(depth_min) or not np.isfinite(depth_max) or depth_min >= depth_max:
-        raise RuntimeError(
-            f"Estimated invalid depth range: depth_min={depth_min}, depth_max={depth_max}"
-        )
-    return depth_min, depth_max
 
 
 def build_features(
@@ -254,17 +196,8 @@ def main() -> None:
         rgb_wrist_shape[1],
     )
 
-    if args.depth_min is None or args.depth_max is None:
-        depth_min, depth_max = estimate_depth_range(
-            data,
-            selected_episode_ids,
-            low_percentile=args.depth_low_percentile,
-            high_percentile=args.depth_high_percentile,
-            samples_per_episode=args.depth_estimation_samples_per_episode,
-        )
-    else:
-        depth_min = float(args.depth_min)
-        depth_max = float(args.depth_max)
+    depth_min = float(args.depth_min)
+    depth_max = float(args.depth_max)
 
     print(
         f"[Info] Creating depth-video shard at {save_root}\n"

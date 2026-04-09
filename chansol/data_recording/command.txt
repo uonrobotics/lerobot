@@ -29,7 +29,9 @@ uv run chansol/data_recording/convert_to_lerobot_shard_depth_video.py \
   --data_root /nas/Dataset/VLA/UON/Isaacsim/OMY_paprika_picking/auto_random_place_aug  \
   --save_path /nas/Dataset/VLA/UON/shards/Isaacsim/OMY_paprika_picking/auto_random_place_aug/shard_00 \
   --episodes_per_shard 50 \
-  --shard_index 0 
+  --shard_index 0
+
+# depth range is fixed to meters [0.0, 3.5] by default
 
 
 
