@@ -263,6 +263,7 @@ class GrootInferenceServer:
 
             batch = self.preprocess(obs_frame)
             action_chunk = self.model.predict_action_chunk(batch)
+            # action_chunk = self.postprocess(action_chunk[...,-1,...])
             action_chunk = self.postprocess(action_chunk)
             action_chunk = action_chunk.squeeze(0).to("cpu").numpy()
             action_chunk = self._ensure_action_chunk_2d(action_chunk)

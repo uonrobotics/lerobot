@@ -29,9 +29,9 @@ uv run chansol/data_recording/convert_to_lerobot_shard_depth_video.py \
   --data_root /nas/Dataset/VLA/UON/Isaacsim/OMY_paprika_picking/auto_random_place_aug  \
   --save_path /nas/Dataset/VLA/UON/shards/Isaacsim/OMY_paprika_picking/auto_random_place_aug/shard_00 \
   --episodes_per_shard 50 \
-  --shard_index 0
-
-# depth range is fixed to meters [0.0, 3.5] by default
+  --shard_index 0 \
+  --depth-min=0.0 \
+  --depth-max=3.5 
 
 
 
@@ -41,13 +41,36 @@ uv run chansol/data_recording/convert_to_lerobot_shard_depth_video.py \
 
 uv run python /home/uon/ochansol/lerobot/chansol/data_recording/merge_lerobot_shards.py \
   --shard-roots \
-    /nas/Dataset/VLA/UON/shards/Isaacsim/OMY_apple_picking/auto_fixed_place_random_light_aug_detect/shard_00 \
-    /nas/Dataset/VLA/UON/shards/Isaacsim/OMY_apple_picking/auto_fixed_place_random_light_aug_detect/shard_01 \
-    /nas/Dataset/VLA/UON/shards/Isaacsim/OMY_apple_picking/auto_fixed_place_random_light_aug_detect/shard_02 \
-    /nas/Dataset/VLA/UON/shards/Isaacsim/OMY_apple_picking/auto_fixed_place_random_light_aug_detect/shard_03 \
-    /nas/Dataset/VLA/UON/shards/Isaacsim/OMY_apple_picking/auto_fixed_place_random_light_aug_detect/shard_04 \
-    /nas/Dataset/VLA/UON/shards/Isaacsim/OMY_apple_picking/auto_fixed_place_random_light_aug_detect/shard_05\
-    /nas/Dataset/VLA/UON/shards/Isaacsim/OMY_apple_picking/auto_fixed_place_random_light_aug_detect/shard_06 \
-    /nas/Dataset/VLA/UON/shards/Isaacsim/OMY_apple_picking/auto_fixed_place_random_light_aug_detect/shard_07 \
-  --output-root /nas/Dataset/VLA/UON/Isaacsim/OMY_apple_picking/auto_fixed_place_random_light_aug_detect \
+    /nas/Dataset/VLA/UON/shards/Isaacsim/OMY_paprika_picking/auto_random_place_aug/shard_00 \
+    /nas/Dataset/VLA/UON/shards/Isaacsim/OMY_paprika_picking/auto_random_place_aug/shard_01 \
+    /nas/Dataset/VLA/UON/shards/Isaacsim/OMY_paprika_picking/auto_random_place_aug/shard_02 \
+    /nas/Dataset/VLA/UON/shards/Isaacsim/OMY_paprika_picking/auto_random_place_aug/shard_03 \
+    /nas/Dataset/VLA/UON/shards/Isaacsim/OMY_paprika_picking/auto_random_place_aug/shard_04 \
+    /nas/Dataset/VLA/UON/shards/Isaacsim/OMY_paprika_picking/auto_random_place_aug/shard_05\
+    /nas/Dataset/VLA/UON/shards/Isaacsim/OMY_paprika_picking/auto_random_place_aug/shard_06 \
+    /nas/Dataset/VLA/UON/shards/Isaacsim/OMY_paprika_picking/auto_random_place_aug/shard_07 \
+    /nas/Dataset/VLA/UON/shards/Isaacsim/OMY_paprika_picking/auto_random_place_aug/shard_08 \
+    /nas/Dataset/VLA/UON/shards/Isaacsim/OMY_paprika_picking/auto_random_place_aug/shard_09 \
+  --output-root /nas/Dataset/VLA/UON/Isaacsim/OMY_paprika_picking/auto_random_place_aug \
   --output-repo-id user1/repo1
+
+
+
+
+####### depth ####
+
+  uv run python /home/uon/ochansol/lerobot/chansol/data_recording/merge_lerobot_shards_depth_video.py \
+  --shard-roots \
+    /nas/Dataset/VLA/UON/shards/Isaacsim/OMY_potato_picking/auto_random_place_aug/shard_00 \
+    /nas/Dataset/VLA/UON/shards/Isaacsim/OMY_potato_picking/auto_random_place_aug/shard_01 \
+    /nas/Dataset/VLA/UON/shards/Isaacsim/OMY_potato_picking/auto_random_place_aug/shard_02 \
+    /nas/Dataset/VLA/UON/shards/Isaacsim/OMY_potato_picking/auto_random_place_aug/shard_03 \
+    /nas/Dataset/VLA/UON/shards/Isaacsim/OMY_potato_picking/auto_random_place_aug/shard_04 \
+    /nas/Dataset/VLA/UON/shards/Isaacsim/OMY_paprika_picking/auto_random_place_aug/shard_00 \
+    /nas/Dataset/VLA/UON/shards/Isaacsim/OMY_paprika_picking/auto_random_place_aug/shard_01 \
+    /nas/Dataset/VLA/UON/shards/Isaacsim/OMY_paprika_picking/auto_random_place_aug/shard_02 \
+    /nas/Dataset/VLA/UON/shards/Isaacsim/OMY_paprika_picking/auto_random_place_aug/shard_03 \
+    /nas/Dataset/VLA/UON/shards/Isaacsim/OMY_paprika_picking/auto_random_place_aug/shard_04 \
+  --output-root /nas/Dataset/VLA/UON/Isaacsim/OMY_potato_paprika_picking/auto_random_place_aug \
+  --output-repo-id user1/repo1
+
