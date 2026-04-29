@@ -25,3 +25,6 @@ Code: https://github.com/NVIDIA/Isaac-GR00T
 Blog: https://developer.nvidia.com/isaac/gr00t
 
 Hugging Face Model: https://huggingface.co/nvidia/GR00T-N1.5-3B
+
+#
+Groot 에 depth resnet 붙히는 작업 진행한 폴더

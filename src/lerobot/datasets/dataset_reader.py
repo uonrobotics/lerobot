@@ -272,7 +272,7 @@ class DatasetReader:
             item = {**video_frames, **item}
 
         if self._image_transforms is not None:
-            image_keys = self._meta.camera_keys
+            image_keys = [key for key in self._meta.camera_keys if not key.startswith("observation.depth")]
             for cam in image_keys:
                 item[cam] = self._image_transforms(item[cam])
 

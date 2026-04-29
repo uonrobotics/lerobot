@@ -27,6 +27,7 @@ from .tdmpc.configuration_tdmpc import TDMPCConfig as TDMPCConfig
 from .vqbet.configuration_vqbet import VQBeTConfig as VQBeTConfig
 from .wall_x.configuration_wall_x import WallXConfig as WallXConfig
 from .xvla.configuration_xvla import XVLAConfig as XVLAConfig
+from .groot_depth.configuration_groot_depth import GrootDepthConfig as GrootDepthConfig
 
 __all__ = [
     "ACTConfig",
@@ -43,4 +44,5 @@ __all__ = [
     "XVLAConfig",
     "WallXConfig",
     "ACTViTConfig",
+    "GrootDepthConfig",
 ]

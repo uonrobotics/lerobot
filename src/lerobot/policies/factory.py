@@ -33,6 +33,8 @@ from lerobot.policies.act.configuration_act import ACTConfig
 from lerobot.policies.act_vit.configuration_act_vit import ACTViTConfig
 from lerobot.policies.diffusion.configuration_diffusion import DiffusionConfig
 from lerobot.policies.groot.configuration_groot import GrootConfig
+# groot depth
+from lerobot.policies.groot_depth.configuration_groot_depth import GrootDepthConfig
 from lerobot.policies.multi_task_dit.configuration_multi_task_dit import MultiTaskDiTConfig
 from lerobot.policies.pi0.configuration_pi0 import PI0Config
 from lerobot.policies.pi05.configuration_pi05 import PI05Config
@@ -134,6 +136,10 @@ def get_policy_class(name: str) -> type[PreTrainedPolicy]:
         from lerobot.policies.groot.modeling_groot import GrootPolicy
 
         return GrootPolicy
+    elif name == "groot_depth":
+        from lerobot.policies.groot_depth.modeling_groot_depth import GrootDepthPolicy
+
+        return GrootDepthPolicy
     elif name == "xvla":
         from lerobot.policies.xvla.modeling_xvla import XVLAPolicy
 
@@ -193,6 +199,8 @@ def make_policy_config(policy_type: str, **kwargs) -> PreTrainedConfig:
         return RewardClassifierConfig(**kwargs)
     elif policy_type == "groot":
         return GrootConfig(**kwargs)
+    elif policy_type == "groot_depth":
+        return GrootDepthConfig(**kwargs)
     elif policy_type == "xvla":
         return XVLAConfig(**kwargs)
     elif policy_type == "wall_x":
