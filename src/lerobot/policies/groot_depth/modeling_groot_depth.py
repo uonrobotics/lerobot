@@ -65,6 +65,26 @@ class GrootDepthPolicy(PreTrainedPolicy):
 
         self.reset()
 
+        # === DIAG: catch the FIRST non-finite grad on depth_scale ===
+        self._grad_step = 0
+        def _depth_scale_grad_watcher(grad):
+            self._grad_step += 1
+            is_finite = torch.isfinite(grad).all().item()
+            g_abs = grad.detach().float().abs().item() if is_finite else float("nan")
+            if self._grad_step <= 300 or not is_finite or g_abs > 1.0:
+                print(f"[GRAD-WATCH step={self._grad_step}] "
+                    f"depth_scale grad_abs={g_abs:.3e} finite={is_finite}")
+            if not is_finite:
+                # 첫 비정상 grad 즉시 정지하고 싶으면 주석 해제
+                # raise RuntimeError(f"Non-finite grad on depth_scale at step {self._grad_step}")
+                pass
+            return grad
+
+        self._groot_model.backbone.depth_encoder.depth_scale.register_hook(
+            _depth_scale_grad_watcher
+        )
+        # === END DIAG ===
+
     def _create_groot_model(self):
         """Create and initialize the GR00T model using Isaac-GR00T API.
 
@@ -87,6 +107,19 @@ class GrootDepthPolicy(PreTrainedPolicy):
 
         model.compute_dtype = "bfloat16" if self.config.use_bf16 else model.compute_dtype
         model.config.compute_dtype = model.compute_dtype
+
+        # === DIAG: init sanity check (one-shot) ===
+        ds = model.backbone.depth_encoder.depth_scale
+        print(f"[INIT-CHECK] depth_scale = {ds.item():.6e}  (expect 1.000000e-03 if fresh)")
+        print(f"[INIT-CHECK] depth_scale.requires_grad={ds.requires_grad} dtype={ds.dtype}")
+        for name, p in model.backbone.depth_encoder.named_parameters():
+            n = p.detach().float().norm().item()
+            print(f"[INIT-CHECK] depth_encoder.{name}: norm={n:.4e} shape={tuple(p.shape)} req_grad={p.requires_grad}")
+        for name, p in model.backbone.named_parameters():
+            if "eagle_linear" in name:
+                n = p.detach().float().norm().item()
+                print(f"[INIT-CHECK] backbone.{name}: norm={n:.4e} req_grad={p.requires_grad}")
+        # === END DIAG ===
 
         return model
 
@@ -245,9 +278,54 @@ class GrootDepthPolicy(PreTrainedPolicy):
         loss = outputs.get("loss")
 
         loss_dict = {"loss": loss.item()}
-        depth_encoder = getattr(self._groot_model.backbone, "depth_encoder", None)
+        backbone = self._groot_model.backbone
+        depth_encoder = getattr(backbone, "depth_encoder", None)
         if depth_encoder is not None and hasattr(depth_encoder, "depth_scale"):
-            loss_dict["depth_scale"] = depth_encoder.depth_scale.detach().float().item()
+            depth_scale_value = depth_encoder.depth_scale.detach().float().item()
+            loss_dict["depth_scale"] = depth_scale_value
+            loss_dict["depth_scale_abs"] = abs(depth_scale_value)
+            
+            if not hasattr(self, "_depth_debug_count"):
+                self._depth_debug_count = 0
+            depth_scale_isfinite = torch.isfinite(depth_encoder.depth_scale.detach()).all().item()
+            should_debug_depth = (
+                self._depth_debug_count < 500
+                or not depth_scale_isfinite
+                or abs(depth_scale_value) > 1.0
+            )
+            if should_debug_depth:
+                depth_norm = getattr(backbone, "last_depth_token_norm", None)
+                ratio = getattr(backbone, "last_depth_to_eagle_norm_ratio", None)
+                depth_norm_value = (
+                    depth_norm.detach().float().item() if isinstance(depth_norm, torch.Tensor) else None
+                )
+                ratio_value = ratio.detach().float().item() if isinstance(ratio, torch.Tensor) else None
+                print(
+                    "[DEPTH DEBUG]",
+                    "depth_scale=", depth_scale_value,
+                    "depth_scale_abs=", abs(depth_scale_value),
+                    "depth_scale_isfinite=", depth_scale_isfinite,
+                    "depth_token_norm=", depth_norm_value,
+                    "ratio=", ratio_value,
+                )
+                self._depth_debug_count += 1
+
+        wrist_depth = groot_inputs.get("wrist_depth")
+        if isinstance(wrist_depth, torch.Tensor):
+            wrist_depth_stats = wrist_depth.detach().float()
+            loss_dict["wrist_depth_mean"] = wrist_depth_stats.mean().item()
+            loss_dict["wrist_depth_std"] = wrist_depth_stats.std().item()
+            loss_dict["wrist_depth_min"] = wrist_depth_stats.min().item()
+            loss_dict["wrist_depth_max"] = wrist_depth_stats.max().item()
+
+        for attr_name, log_name in (
+            ("last_eagle_token_norm", "eagle_token_norm"),
+            ("last_depth_token_norm", "depth_token_norm"),
+            ("last_depth_to_eagle_norm_ratio", "depth_to_eagle_norm_ratio"),
+        ):
+            value = getattr(backbone, attr_name, None)
+            if value is not None:
+                loss_dict[log_name] = value.detach().float().item()
 
         return loss, loss_dict
 

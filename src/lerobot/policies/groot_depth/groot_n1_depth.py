@@ -239,9 +239,16 @@ class EagleBackbone(nn.Module):
         eagle_embeds, eagle_mask = self.forward_eagle(vl_input)
         combined_embeds = eagle_embeds
         combined_mask = eagle_mask
+        self.last_eagle_token_norm = eagle_embeds.detach().float().norm(dim=-1).mean()
+        self.last_depth_token_norm = None
+        self.last_depth_to_eagle_norm_ratio = None
 
         if self.depth_encoder is not None and "wrist_depth" in vl_input:
             depth_tokens = self.depth_encoder(vl_input["wrist_depth"])
+            self.last_depth_token_norm = depth_tokens.detach().float().norm(dim=-1).mean()
+            self.last_depth_to_eagle_norm_ratio = self.last_depth_token_norm / (
+                self.last_eagle_token_norm + 1e-6
+            )
             depth_mask = torch.ones(
                 (depth_tokens.shape[0], depth_tokens.shape[1]),
                 device=eagle_mask.device,
